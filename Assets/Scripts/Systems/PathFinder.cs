@@ -41,9 +41,14 @@ public class PathFinder : MonoBehaviour
         foreach (Hex Hex in Hexes)
         {
             Hex.SetPickState(false);
-        }
+        }   
 
-        HashSet<Hex> Path = FindShortestPath(PickedUnit.GetComponentByType<MoveComponent>().Position, FinalPoint, Hexes);
+        var UnitPosition = PickedUnit.GetComponentByType<MoveComponent>().Position;
+
+        HashSet<Hex> Path = FindShortestPath(UnitPosition, FinalPoint, Hexes);
+
+        Path.RemoveWhere(x => x.Position == UnitPosition);
+
         EventBus.Invoke(new PathSignal(Path));
 
         foreach (Hex Hex in Path)

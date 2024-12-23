@@ -29,6 +29,8 @@ public class Player : Unit
                 break;
             default: break;
         }
+
+        EmitSignal(Obj);
     }
 
     void OnMouseDown()

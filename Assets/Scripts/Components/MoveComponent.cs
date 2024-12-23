@@ -7,17 +7,30 @@ public class MoveComponent : Components, IFixedUpdate
     EventBus EventBus;
     WorldUpdateSystem WorldUpdateSystem;
     StepByStepSystem StepByStepSystem;
+    [ReadOnly] public Vector3Int Position;
 
     [SerializeField] float MoveSpeed;
-    [SerializeField] int TurnCount;
-    public int CurrentTurnCount { get; private set; }
-    public Vector3Int Position;
+
+    [SerializeField] private int _MaxStepsPerTurn;
+    public int MaxStepsPerTurn => _MaxStepsPerTurn;
+
+    [SerializeField, ReadOnly] private int _CurrentTurnCount;
+    public int CurrentTurnCount => _CurrentTurnCount;
 
     private HashSet<Hex> AvailableHexes = new HashSet<Hex>();
 
+    Hex TargetHex;
+
+    void OnValidate()
+    {
+        _MaxStepsPerTurn = Mathf.Max(0, _MaxStepsPerTurn);
+        _CurrentTurnCount = _MaxStepsPerTurn;
+        MoveSpeed = Mathf.Max(0, MoveSpeed);
+    }
+
     public override void Initialization(Unit Master)
     {
-        CurrentTurnCount = TurnCount;
+        _CurrentTurnCount = _MaxStepsPerTurn;
         ExtractSystems(Master.Systems);
     }
 
@@ -55,7 +68,7 @@ public class MoveComponent : Components, IFixedUpdate
                 break;
 
             case EnumSignals.NextTurn:
-                CurrentTurnCount = TurnCount;
+                _CurrentTurnCount = _MaxStepsPerTurn;
                 break;
 
             default: break;
@@ -66,10 +79,11 @@ public class MoveComponent : Components, IFixedUpdate
 
     private void Move()
     {
-        Hex TargetHex = AvailableHexes.FirstOrDefault();
-
-        if (TargetHex == null)
-            return;
+        if(TargetHex == null)
+        {
+            TargetHex = AvailableHexes.FirstOrDefault();
+            if(!TargetHex) return;
+        }
 
         transform.position = Vector3.MoveTowards(transform.position, new Vector3(TargetHex.transform.position.x, TargetHex.Position.y - 1, TargetHex.transform.position.z), Time.fixedDeltaTime * MoveSpeed);
         transform.LookAt(TargetHex.transform.position);
@@ -77,17 +91,17 @@ public class MoveComponent : Components, IFixedUpdate
 
         if (Vector3.Distance(transform.position, new Vector3(TargetHex.transform.position.x, TargetHex.Position.y - 1, TargetHex.transform.position.z)) == 0)
         {
-            if (AvailableHexes.Count > 1) CurrentTurnCount--;
-
+            _CurrentTurnCount--;
             TargetHex.SetPickState(false);
             Position = TargetHex.Position;
             AvailableHexes.Remove(TargetHex);
+            TargetHex = null;
 
             if (CurrentTurnCount == 0 || AvailableHexes.Count == 0)
             {
                 EmitSignal(EnumMoveSignals.StopMoving);
                 WorldUpdateSystem.Unsubscribe(this);
-                CurrentTurnCount = TurnCount;
+                _CurrentTurnCount = _MaxStepsPerTurn;
             }
         }
     }

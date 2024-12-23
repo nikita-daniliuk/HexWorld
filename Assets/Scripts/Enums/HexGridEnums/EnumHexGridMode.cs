@@ -1,7 +1,7 @@
 public enum EnumHexGridMode
 {
     Generation,
-    Paint,
+    Creation,
     Transform,
-    Bridge
+    Paint
 }

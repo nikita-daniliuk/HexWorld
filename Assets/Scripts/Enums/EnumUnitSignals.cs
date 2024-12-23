@@ -1,4 +1,4 @@
 public enum EnumUnitSignals
 {
-    Initialization
+    Initialization, StateUpdated
 }

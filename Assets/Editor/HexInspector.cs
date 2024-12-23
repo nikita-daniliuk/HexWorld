@@ -12,7 +12,6 @@ public class HexInspector : Editor
         EditorGUILayout.LabelField("Hex Information", EditorStyles.boldLabel);
         EditorGUILayout.LabelField("Position", $"X:  {Hex.Position.x}  Y:  {Hex.Position.z}  H:  {Hex.Position.y}");
         EditorGUILayout.LabelField("Is Busy", Hex.IsBisy ? "Yes" : "No");
-        EditorGUILayout.LabelField("Is Bridge", Hex.IsBridge ? "Yes" : "No");
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Connected Hexes", EditorStyles.boldLabel);

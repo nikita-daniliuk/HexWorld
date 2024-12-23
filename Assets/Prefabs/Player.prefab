@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7991139334587504026}
   - component: {fileID: 2241932539615181139}
   - component: {fileID: 7334364742401617273}
+  - component: {fileID: 5230539869152775823}
   - component: {fileID: 1454734558814298629}
   m_Layer: 0
   m_Name: Player
@@ -60,8 +61,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bd1f86bece87af45ab6f3c1999ccf05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Position: {x: 0, y: 0, z: 0}
   MoveSpeed: 5
-  TurnCount: 500
+  _MaxStepsPerTurn: 10
+  _CurrentTurnCount: 10
+--- !u!114 &5230539869152775823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 327354327490106464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5937e8ed50bce9489ba234c2716328f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Animator: {fileID: 2626287909044188460}
 --- !u!65 &1454734558814298629
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -91,10 +107,15 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7991139334587504026}
     m_Modifications:
+    - target: {fileID: 3296538689638434824, guid: 1199db9163fc1024aa4ee121ef223ce4,
+        type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 710f29d260268014f9743bdf483b99cd, type: 2}
     - target: {fileID: 6734645840121181355, guid: 1199db9163fc1024aa4ee121ef223ce4,
         type: 3}
       propertyPath: m_Name
-      value: barbarian
+      value: Barbarian
       objectReference: {fileID: 0}
     - target: {fileID: 7779442883182137201, guid: 1199db9163fc1024aa4ee121ef223ce4,
         type: 3}
@@ -151,6 +172,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1199db9163fc1024aa4ee121ef223ce4, type: 3}
+--- !u!95 &2626287909044188460 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 3296538689638434824, guid: 1199db9163fc1024aa4ee121ef223ce4,
+    type: 3}
+  m_PrefabInstance: {fileID: 706460997308677412}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &7078524594596049493 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7779442883182137201, guid: 1199db9163fc1024aa4ee121ef223ce4,

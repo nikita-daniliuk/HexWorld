@@ -35,7 +35,8 @@ public class PlayerSpawner : MonoBehaviour
 
         if(!RandomHex) return;
 
-        var Player = Factory.Create<Unit>(PlayerPrefab.gameObject, RandomHex.transform.position + Vector3.up * (RandomHex.Position.y - 1));
+        var Player = Factory.Create<Unit>(PlayerPrefab.gameObject, RandomHex.transform.position);
+
         Player.Initialization(new HashSet<object>{
             EventBus,
             WorldUpdateSystem,

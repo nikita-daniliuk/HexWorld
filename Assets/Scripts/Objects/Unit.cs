@@ -16,7 +16,11 @@ public abstract class Unit : BaseSignal
         EmitSignal(new Message(EnumUnitSignals.Initialization, gameObject, gameObject.name));
     }
 
-    protected virtual void ChangeState(EnumUnitState State) => _State = State;
+    protected virtual void ChangeState(EnumUnitState State)
+    {
+        _State = State;
+        EmitSignal(EnumUnitSignals.StateUpdated);
+    } 
 
     public T? GetComponentByType<T>() where T : Components
     {

@@ -1,4 +1,5 @@
 public enum EnumTransformTool
 {
-    SetHeight
+    SetHeight,
+    SetLenght
 }

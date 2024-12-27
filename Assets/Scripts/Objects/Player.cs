@@ -21,8 +21,12 @@ public class Player : Unit
                     case EnumMoveSignals.StartMoving :
                         ChangeState(EnumUnitState.Move);
                         break;
+                    case EnumMoveSignals.StopJump :
                     case EnumMoveSignals.StopMoving :
                         ChangeState(EnumUnitState.Stay);
+                        break;
+                    case EnumMoveSignals.StartJump :
+                        ChangeState(EnumUnitState.Jump);
                         break;
                     default: break;
                 }

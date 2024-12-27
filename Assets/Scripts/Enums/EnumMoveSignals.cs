@@ -1,5 +1,8 @@
 public enum EnumMoveSignals
 {
     StartMoving,
-    StopMoving
+    StopMoving,
+    StartJump,
+    Jump,
+    StopJump
 }

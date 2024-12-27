@@ -1,5 +1,6 @@
 public enum EnumUnitState
 {
     Stay,
-    Move
+    Move,
+    Jump
 }

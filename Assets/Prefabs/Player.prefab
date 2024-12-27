@@ -63,6 +63,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Position: {x: 0, y: 0, z: 0}
   MoveSpeed: 5
+  _JumpLength: 4
   _MaxStepsPerTurn: 10
   _CurrentTurnCount: 10
 --- !u!114 &5230539869152775823

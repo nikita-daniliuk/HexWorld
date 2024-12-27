@@ -9,8 +9,11 @@ public class Hex : Unit
     [SerializeField] private Vector3Int _Position;
     public Vector3Int Position => _Position;
     
-    [SerializeField] private bool _IsBisy;
-    public bool IsBisy => _IsBisy;
+    [SerializeField] private bool _IsWalkable = true;
+    public bool IsWalkable => _IsWalkable;
+
+    [SerializeField] private int _Lenght = 1;
+    public int Lenght => _Lenght;
 
     [SerializeField] private List<Hex> ConnectedHexesList;
     public IReadOnlyList<Hex> ConnectedHexes => ConnectedHexesList;
@@ -18,6 +21,8 @@ public class Hex : Unit
     public GameObject Pick;
     public GameObject Enter;
     public MeshRenderer HexVisual;
+    public GameObject Walkable;
+    public GameObject NotWalkable;
 
     public override void Initialization(HashSet<object> Systems)
     {
@@ -37,7 +42,10 @@ public class Hex : Unit
     public void UpdateEmblemPosition()
     {
         Pick.transform.position = new Vector3(Pick.transform.position.x, Position.y - 1 + 0.1f, Pick.transform.position.z);
-        Enter.transform.position = new Vector3(Enter.transform.position.x, Position.y - 1 + 0.05f, Enter.transform.position.z);        
+        Enter.transform.position = new Vector3(Enter.transform.position.x, Position.y - 1 + 0.05f, Enter.transform.position.z);
+
+        Walkable.transform.position = new Vector3(Walkable.transform.position.x, Position.y - 1 + 0.1f, Walkable.transform.position.z);
+        NotWalkable.transform.position = new Vector3(NotWalkable.transform.position.x, Position.y - 1 + 0.1f, NotWalkable.transform.position.z);      
     }
 
     public void SetNeighborHexes(HashSet<Hex> ConnectedHexes)
@@ -50,9 +58,15 @@ public class Hex : Unit
         Pick.SetActive(IsActive);
     }
 
-    public void SetBisyState(bool Value)
+    public void SetIsWalkable(bool Value)
     {
-        _IsBisy = Value;
+        _IsWalkable = Value;
+    }
+
+    public void SetLength(int Lenght)
+    {
+        _Lenght = Lenght;
+        transform.localScale = new Vector3(1, Lenght, 1);
     }
 
     public void SetHexVisual(MeshRenderer NewHexVisual)

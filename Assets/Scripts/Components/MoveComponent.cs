@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System.Collections;
 
 public class MoveComponent : Components, IFixedUpdate
 {
@@ -11,6 +12,9 @@ public class MoveComponent : Components, IFixedUpdate
 
     [SerializeField] float MoveSpeed;
 
+    [SerializeField] private int _JumpLength;
+    public int JumpLength => _JumpLength;
+
     [SerializeField] private int _MaxStepsPerTurn;
     public int MaxStepsPerTurn => _MaxStepsPerTurn;
 
@@ -20,6 +24,8 @@ public class MoveComponent : Components, IFixedUpdate
     private HashSet<Hex> AvailableHexes = new HashSet<Hex>();
 
     Hex TargetHex;
+
+    Unit Master;
 
     void OnValidate()
     {
@@ -32,6 +38,7 @@ public class MoveComponent : Components, IFixedUpdate
     {
         _CurrentTurnCount = _MaxStepsPerTurn;
         ExtractSystems(Master.Systems);
+        this.Master = Master;
     }
 
     protected override void ExtractSystems(HashSet<object> Systems)
@@ -61,10 +68,23 @@ public class MoveComponent : Components, IFixedUpdate
         switch (Obj)
         {
             case PathSignal PathSignal:
-                EmitSignal(EnumMoveSignals.StartMoving);
-                AvailableHexes.Clear();
-                AvailableHexes = PathSignal.Hexes.ToHashSet();
-                WorldUpdateSystem.Subscribe(this);
+                switch (Master.State)
+                {
+                    case EnumUnitState.Stay :
+                        EmitSignal(EnumMoveSignals.StartMoving);
+                        AvailableHexes.Clear();
+                        AvailableHexes = PathSignal.Hexes.ToHashSet();
+                        WorldUpdateSystem.Subscribe(this);                     
+                        break;
+                    case EnumUnitState.Jump :
+                        var Hex = PathSignal.Hexes.FirstOrDefault();
+                        StartCoroutine(JumpMoveCoroutine(transform.position, Hex.transform.position, 0.5f));
+                        Position = Hex.Position;
+                        EmitSignal(EnumMoveSignals.StopJump);
+                        break;
+                    default: break;
+                }
+
                 break;
 
             case EnumSignals.NextTurn:
@@ -76,6 +96,37 @@ public class MoveComponent : Components, IFixedUpdate
     }
 
     public void FixedRefresh() => Move();
+
+    void Update()
+    {
+        if(Input.GetKeyDown(KeyCode.V) && Master.State == EnumUnitState.Stay)
+        {
+            EmitSignal(EnumMoveSignals.StartJump);
+            EventBus.Invoke(new JumpSignal(this));
+        }
+    }
+
+    IEnumerator JumpMoveCoroutine(Vector3 startPosition, Vector3 endPosition, float duration)
+    {
+        transform.LookAt(endPosition);
+        transform.eulerAngles = new Vector3(0, transform.eulerAngles.y, 0);
+
+        float elapsedTime = 0f;
+
+        while (elapsedTime < duration)
+        {
+            float t = elapsedTime / duration;
+            float height = Mathf.Sin(t * Mathf.PI) * JumpLength;
+
+            transform.position = Vector3.Lerp(startPosition, endPosition, t);
+            transform.position += new Vector3(0, height, 0);
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = endPosition;
+    }
 
     private void Move()
     {

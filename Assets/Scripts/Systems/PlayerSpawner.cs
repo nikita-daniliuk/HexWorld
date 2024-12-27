@@ -29,7 +29,7 @@ public class PlayerSpawner : MonoBehaviour
     void Spawn()
     {
         Hex RandomHex = Pool.GetAllOfType<Hex>()
-            .Where(x => !x.IsBisy)
+            .Where(x => x.IsWalkable)
             .OrderBy(x => UnityEngine.Random.value)
             .FirstOrDefault();
 

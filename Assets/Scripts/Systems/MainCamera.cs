@@ -7,15 +7,22 @@ public class MainCamera : MonoBehaviour
     public float MinFOV;
     public float MaxFOV;
     public float RotationSpeed;
+    public float SmoothTime = 0.1f; // Добавлено время сглаживания для движения и вращения
 
     private Vector3 LastMousePosition;
     private bool IsDragging;
     private bool IsRotating;
     private Camera Camera;
 
+    private Vector3 TargetPosition;
+    private Quaternion TargetRotation;
+    private Vector3 Velocity = Vector3.zero;
+
     private void Start()
     {
         Camera = GetComponent<Camera>();
+        TargetPosition = transform.position;
+        TargetRotation = transform.rotation;
     }
 
     private void Update()
@@ -23,6 +30,7 @@ public class MainCamera : MonoBehaviour
         HandleMouseDrag();
         ZoomCamera();
         RotateCamera();
+        SmoothMovement();
     }
 
     private void HandleMouseDrag()
@@ -56,7 +64,7 @@ public class MainCamera : MonoBehaviour
             Forward.Normalize();
 
             Vector3 MoveDirection = (Right * -MoveX) + (Forward * -MoveZ);
-            transform.position += MoveDirection;
+            TargetPosition += MoveDirection;
         }
     }
 
@@ -88,13 +96,13 @@ public class MainCamera : MonoBehaviour
 
             float RotationAmount = Delta.x * RotationSpeed * Time.deltaTime;
 
-            Vector3 CameraDirection = transform.forward;
-            Vector3 CameraPosition = transform.position;
-
-            float T = CameraPosition.y / -CameraDirection.y;
-            Vector3 TargetPoint = CameraPosition + CameraDirection * T;
-
-            transform.RotateAround(TargetPoint, Vector3.up, RotationAmount);
+            TargetRotation = Quaternion.AngleAxis(RotationAmount, Vector3.up) * TargetRotation;
         }
+    }
+
+    private void SmoothMovement()
+    {
+        transform.position = Vector3.SmoothDamp(transform.position, TargetPosition, ref Velocity, SmoothTime);
+        transform.rotation = Quaternion.Slerp(transform.rotation, TargetRotation, SmoothTime);
     }
 }

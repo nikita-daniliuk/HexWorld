@@ -6,6 +6,7 @@ using UnityEngine;
 [RequireComponent(typeof(HexGridGenerator))]
 [RequireComponent(typeof(HexPainter))]
 [RequireComponent(typeof(HexCreator))]
+[RequireComponent(typeof(HexWalkable))]
 public class HexGridTool : BaseSignal
 {
     public Hex Ground;
@@ -31,14 +32,18 @@ public class HexGridTool : BaseSignal
     public HexGridGenerator HexGridGenerator;
     public HexPainter HexPainter;
     public HexCreator HexCreator;
+    public HexWalkable HexWalkable;
 
     public bool IsEraseMode;
+
+    public bool IsWalkable;
 
     private void OnEnable()
     {
         HexGridGenerator = gameObject.GetComponent<HexGridGenerator>();
         HexPainter = gameObject.GetComponent<HexPainter>();
         HexCreator = gameObject.GetComponent<HexCreator>();
+        HexWalkable = gameObject.GetComponent<HexWalkable>();
 
         Selection.selectionChanged += OnSelectionChanged;
         SceneView.duringSceneGui += OnSceneGUI;
@@ -56,6 +61,7 @@ public class HexGridTool : BaseSignal
         if (Selection.activeObject != gameObject)
         {
             Mode = EnumHexGridMode.Generation;
+            HexWalkable.HideHexWalkableMap();
         }
     }
 
@@ -71,11 +77,12 @@ public class HexGridTool : BaseSignal
             case EnumHexGridMode.Paint :
                 if(HexPaintOptions != null && HexPaintOptions.Count > 0 && (Event.type == EventType.MouseDown || Event.type == EventType.MouseDrag) && Event.button == 0)
                 {
-                    Hex Hex = HexRay(Event, out Vector3 Hitpoint);
+                    Hex Hex = HexRay(Event, out RaycastHit Hit);
                     if(Hex)
                     {
                         if(IsEraseMode)
                         {
+                            if(Event.type == EventType.MouseDown)
                             HexCreator.RemoveHex(Hex);
                         }
                         else
@@ -89,7 +96,7 @@ public class HexGridTool : BaseSignal
             case EnumHexGridMode.Transform :
                 if((Event.type == EventType.MouseDown || Event.type == EventType.MouseDrag) && Event.button == 0)
                 {
-                    Hex Hex = HexRay(Event, out Vector3 Hitpoint);
+                    Hex Hex = HexRay(Event, out RaycastHit Hit);
 
                     switch (TransformTool)
                     {
@@ -97,7 +104,7 @@ public class HexGridTool : BaseSignal
                             Hex?.SetHeight(TargetHeight);
                             break;
                         case EnumTransformTool.SetLenght :
-                            if(Hex) Hex.transform.localScale = new Vector3(1, TargetLenght, 1);
+                            Hex?.SetLength(TargetLenght);
                             break;
                         default: break;
                     }
@@ -107,30 +114,39 @@ public class HexGridTool : BaseSignal
             case EnumHexGridMode.Creation :
                 if(Ground && Event.type == EventType.MouseDown && Event.button == 0)
                 {
-                    Hex Hex = HexRay(Event, out Vector3 Hitpoint);
-                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hitpoint, Ground.gameObject, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
+                    Hex Hex = HexRay(Event, out RaycastHit Hit);
+                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, Ground.gameObject, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
                     Event.Use();    
                 }
+                break;
+            case EnumHexGridMode.Walkable :
+                if((Event.type == EventType.MouseDown || Event.type == EventType.MouseDrag) && Event.button == 0)
+                {
+                    Hex Hex = HexRay(Event, out RaycastHit Hit);
+                    if(Hex)
+                    {
+                        Hex.SetIsWalkable(IsWalkable);
+                        HexWalkable.SetWalkableMap(Hex);                        
+                    }
+                    Event.Use();    
+                }                
                 break;
             default: break;
         }
     }
 
-    private Hex HexRay(Event Event, out Vector3 Hitpoint)
+    private Hex HexRay(Event Event, out RaycastHit Hit)
     {
         Hex Hex = null;
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.mousePosition);
 
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            if(!Physics.Linecast(ray.origin, hit.point)) 
-            {
-                Transform Parent = hit.collider.transform.parent;
-                if (Parent != null && Parent.TryGetComponent<Hex>(out Hex CheckHex)) Hex = CheckHex;
-            }
+            Transform Parent = hit.collider.transform.parent;
+            if (Parent != null && Parent.TryGetComponent<Hex>(out Hex CheckHex)) Hex = CheckHex;
         }
 
-        Hitpoint = hit.point;
+        Hit = hit;
         return Hex;
     }
 }

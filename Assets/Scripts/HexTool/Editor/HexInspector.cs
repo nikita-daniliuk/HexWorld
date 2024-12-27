@@ -10,7 +10,7 @@ public class HexInspector : Editor
         Hex Hex = (Hex)target;
 
         EditorGUILayout.LabelField("Hex Information", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField("Position", $"X:  {Hex.Position.x}  Y:  {Hex.Position.z}  H:  {Hex.Position.y}");
+        EditorGUILayout.LabelField("Position", $"X:  {Hex.Position.x}  Y:  {Hex.Position.y}  Z:  {Hex.Position.z}");
         EditorGUILayout.LabelField("Lenght", $"{Hex.Lenght}");
         EditorGUILayout.LabelField("IsWalkable", Hex.IsWalkable ? "Yes" : "No");
 
@@ -22,7 +22,7 @@ public class HexInspector : Editor
             foreach (var ConnectedHex in Hex.ConnectedHexes)
             {
                 string HexName = ConnectedHex.HexVisual != null ? ConnectedHex.HexVisual.name.Replace("(Clone)", "").Trim() : "Unnamed Hex";
-                EditorGUILayout.LabelField($"{HexName}   X:  {ConnectedHex.Position.x}  Y:  {ConnectedHex.Position.z}  H:  {ConnectedHex.Position.y}");
+                EditorGUILayout.LabelField($"{HexName}   X:  {ConnectedHex.Position.x}  Y:  {ConnectedHex.Position.y}  H:  {ConnectedHex.Position.z}");
             }
         }
         else

@@ -89,7 +89,7 @@ public class Hex : Unit
 
     private void OnMouseEnter()
     {
-        Enter.SetActive(HexVisual.enabled);
+        Enter.SetActive(true);
     }
 
     private void OnMouseExit()

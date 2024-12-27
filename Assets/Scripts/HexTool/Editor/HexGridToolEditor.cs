@@ -182,11 +182,29 @@ public class HexGridToolEditor : Editor
                 break;
 
             case EnumHexGridMode.Walkable:
+
                 EditorGUILayout.LabelField("Set Walkable Settings", EditorStyles.boldLabel);
 
                 HexGridTool.HexWalkable.ShowHexWalkableMap();
-                HexGridTool.IsWalkable = EditorGUILayout.Toggle("Set Walkable", HexGridTool.IsWalkable);
 
+                Color walkableColor = new Color(0.2f, 0.7f, 0.2f);
+                Color unwalkableColor = new Color(0.7f, 0.2f, 0.2f);
+
+                Color buttonColor = HexGridTool.IsWalkable ? walkableColor : unwalkableColor;
+                GUIStyle buttonStyle = new GUIStyle(GUI.skin.button);
+                buttonStyle.fontSize = 14;
+                buttonStyle.fixedHeight = 30;
+                buttonStyle.normal.textColor = Color.white;
+
+                GUI.backgroundColor = buttonColor;
+
+                string buttonText = HexGridTool.IsWalkable ? "Walkable" : "Unwalkable";
+                if (GUILayout.Button(buttonText, buttonStyle))
+                {
+                    HexGridTool.IsWalkable = !HexGridTool.IsWalkable;
+                }
+
+                GUI.backgroundColor = Color.white;
                 break;
 
             default: break;

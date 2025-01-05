@@ -214,7 +214,7 @@ public class PathFinder : MonoBehaviour
 
                 foreach (var TargetHex in MatchingHexes)
                 {
-                    if (!TargetHex.Walkable) continue;
+                    if (!TargetHex.IsWalkable || (TargetHex.Position.x == CenterHex.Position.x && TargetHex.Position.z == CenterHex.Position.z)) continue;
 
                     int TargetHeight = TargetHex.Position.y;
 

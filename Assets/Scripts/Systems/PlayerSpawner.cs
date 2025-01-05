@@ -13,18 +13,7 @@ public class PlayerSpawner : MonoBehaviour
 
     [SerializeField] Unit PlayerPrefab;
 
-    void Start() => Spawn();
-
-    void SignalBox(object Obj)
-    {
-        switch (Obj)
-        {
-            case EnumGenerateSignals.StopGeneration :
-                Spawn();
-                break;
-            default: break;
-        }
-    }
+    void Awake() => Spawn();
 
     void Spawn()
     {

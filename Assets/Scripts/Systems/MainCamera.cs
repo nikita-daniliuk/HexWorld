@@ -1,108 +1,145 @@
+using System.Linq;
 using UnityEngine;
+using Zenject;
 
 public class MainCamera : MonoBehaviour
 {
-    public float MoveSpeed;
-    public float ScrollSpeed;
-    public float MinFOV;
-    public float MaxFOV;
-    public float RotationSpeed;
-    public float SmoothTime = 0.1f; // Добавлено время сглаживания для движения и вращения
+    [Inject] Pool Pool;
+
+    [Header("Horizontal Movement / Rotation")]
+    public float MoveSpeed = 10f;
+    public float RotationSpeed = 5f; // Скорость вращения
+    public float RotationSmoothSpeed = 5f; // Плавность вращения
+    public float HorizontalSmoothSpeed = 5f;
+
+    [Header("Vertical Movement")]
+    public float MinDistance = 5f;
+    public float MaxDistance = 50f;
+    public float ScrollSpeed = 5f;
+    public float VerticalSmoothSpeed = 5f;
+
+    [Header("Raycast Settings")]
+    public LayerMask CollisionMask;
+    public float HeightThreshold = 0.1f;
+
+    private Player Player;
+    private Camera Cam;
+
+    private Vector3 TargetPosition;
+    private float TargetRotationY;
+    private float CurrentDistance;
+    private float BaseHeight = 0f;
+    private float TargetBaseHeight = 0f;
+    private float CurrentRotationY;
 
     private Vector3 LastMousePosition;
     private bool IsDragging;
     private bool IsRotating;
-    private Camera Camera;
 
-    private Vector3 TargetPosition;
-    private Quaternion TargetRotation;
-    private Vector3 Velocity = Vector3.zero;
-
-    private void Start()
+    void Start()
     {
-        Camera = GetComponent<Camera>();
+        Cam = GetComponent<Camera>();
         TargetPosition = transform.position;
-        TargetRotation = transform.rotation;
+        TargetRotationY = transform.eulerAngles.y;
+        CurrentDistance = (MaxDistance + MinDistance) / 2f;
+
+        Player = Pool.GetAllOfType<Player>().FirstOrDefault();
     }
 
-    private void Update()
+    void Update()
     {
-        HandleMouseDrag();
-        ZoomCamera();
-        RotateCamera();
-        SmoothMovement();
+        HandleMouseInput();
+        HandleZoom();
+        UpdateSpringArm();
     }
 
-    private void HandleMouseDrag()
+    private void HandleMouseInput()
     {
         if (Input.GetMouseButtonDown(0))
         {
             IsDragging = true;
             LastMousePosition = Input.mousePosition;
         }
-
         if (Input.GetMouseButtonUp(0))
         {
             IsDragging = false;
         }
 
-        if (IsDragging)
-        {
-            Vector3 Delta = Input.mousePosition - LastMousePosition;
-            LastMousePosition = Input.mousePosition;
-
-            float MoveX = Delta.x * MoveSpeed * Time.deltaTime;
-            float MoveZ = Delta.y * MoveSpeed * Time.deltaTime;
-
-            Vector3 Right = transform.right;
-            Vector3 Forward = transform.forward;
-
-            Right.y = 0;
-            Forward.y = 0;
-
-            Right.Normalize();
-            Forward.Normalize();
-
-            Vector3 MoveDirection = (Right * -MoveX) + (Forward * -MoveZ);
-            TargetPosition += MoveDirection;
-        }
-    }
-
-    private void ZoomCamera()
-    {
-        float Scroll = Input.GetAxis("Mouse ScrollWheel");
-
-        Camera.fieldOfView -= Scroll * ScrollSpeed;
-        Camera.fieldOfView = Mathf.Clamp(Camera.fieldOfView, MinFOV, MaxFOV);
-    }
-
-    private void RotateCamera()
-    {
         if (Input.GetMouseButtonDown(1))
         {
             IsRotating = true;
             LastMousePosition = Input.mousePosition;
         }
-
         if (Input.GetMouseButtonUp(1))
         {
             IsRotating = false;
         }
 
-        if (IsRotating)
+        if (IsDragging)
         {
-            Vector3 Delta = Input.mousePosition - LastMousePosition;
+            Vector3 delta = Input.mousePosition - LastMousePosition;
             LastMousePosition = Input.mousePosition;
 
-            float RotationAmount = Delta.x * RotationSpeed * Time.deltaTime;
+            float moveX = delta.x * MoveSpeed * Time.deltaTime;
+            float moveZ = delta.y * MoveSpeed * Time.deltaTime;
 
-            TargetRotation = Quaternion.AngleAxis(RotationAmount, Vector3.up) * TargetRotation;
+            Vector3 right = transform.right;
+            Vector3 forward = transform.forward;
+
+            right.y = 0;
+            forward.y = 0;
+
+            right.Normalize();
+            forward.Normalize();
+
+            Vector3 moveDirection = (right * -moveX) + (forward * -moveZ);
+            TargetPosition += moveDirection;
         }
+
+        if (IsRotating)
+        {
+            Vector3 delta = Input.mousePosition - LastMousePosition;
+            LastMousePosition = Input.mousePosition;
+
+            TargetRotationY += delta.x * RotationSpeed * Time.fixedDeltaTime;
+        }
+
+        CurrentRotationY = Mathf.Lerp(CurrentRotationY, TargetRotationY, Time.fixedDeltaTime * RotationSmoothSpeed);
     }
 
-    private void SmoothMovement()
+    private void HandleZoom()
     {
-        transform.position = Vector3.SmoothDamp(transform.position, TargetPosition, ref Velocity, SmoothTime);
-        transform.rotation = Quaternion.Slerp(transform.rotation, TargetRotation, SmoothTime);
+        float scrollInput = Input.GetAxis("Mouse ScrollWheel");
+        CurrentDistance -= scrollInput * ScrollSpeed;
+        CurrentDistance = Mathf.Clamp(CurrentDistance, MinDistance, MaxDistance);
+    }
+
+    private void UpdateSpringArm()
+    {
+        Ray ray = Cam.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2));
+
+        RaycastHit hit;
+        float newHeight = Player ? Player.transform.position.y : 0f;
+
+        if (Physics.Raycast(ray, out hit, 2000f, CollisionMask))
+        {
+            newHeight = Mathf.Max(hit.point.y, Player.transform.position.y);
+        }
+
+        if (Mathf.Abs(newHeight - TargetBaseHeight) > HeightThreshold)
+        {
+            TargetBaseHeight = newHeight;
+        }
+
+        BaseHeight = Mathf.Lerp(BaseHeight, TargetBaseHeight, Time.fixedDeltaTime * VerticalSmoothSpeed);
+
+        Vector3 smoothedPosition = Vector3.Lerp(
+            transform.position,
+            new Vector3(TargetPosition.x, BaseHeight + CurrentDistance, TargetPosition.z),
+            Time.fixedDeltaTime * HorizontalSmoothSpeed
+        );
+        transform.position = smoothedPosition;
+
+        transform.rotation = Quaternion.Euler(60f, TargetRotationY, 0f);
     }
 }

@@ -38,7 +38,7 @@ public class HexGridGenerator : BaseSignal
         HexParent.name = "Hex";
     }
 
-    public void GenerateHexagonalGridByDimensions(int SquareHeight, int SquareWidth, int TargetHeight, Hex Ground)
+    public void GenerateHexagonalGridByDimensions(int SquareHeight, int SquareWidth, int TargetHeight, Hex Ground, MeshRenderer StarterPaint)
     {
         ClearHexGrid();
         FindOrCreateHexParent();
@@ -51,6 +51,7 @@ public class HexGridGenerator : BaseSignal
             {
                 int offset = R / 2;
                 Vector3Int Coords = new Vector3Int(Q - offset, TargetHeight, R);
+                
                 if (Ground == null)
                 {
                     Debug.LogError("Ground prefab is not assigned.");
@@ -60,6 +61,8 @@ public class HexGridGenerator : BaseSignal
                 Hex Hex = Instantiate(Ground, HexToPosition(Coords.x, Coords.z) - centerOffset, Quaternion.identity, HexParent.transform);
 
                 Hex.Initialization(new HashSet<object> { Coords });
+
+                Hex.SetHexVisual(StarterPaint);
 
                 Hex.SetHeight(TargetHeight);
 

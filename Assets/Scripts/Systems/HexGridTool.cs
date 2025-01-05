@@ -9,7 +9,8 @@ using UnityEngine;
 [RequireComponent(typeof(HexWalkable))]
 public class HexGridTool : BaseSignal
 {
-    public Hex Ground;
+    public Hex HexPrefab;
+    public MeshRenderer StarterPaint;
     public EnumHexGridGenerationType GenerationType;
     public EnumHexGridMode Mode;
     public EnumTransformTool TransformTool;
@@ -63,6 +64,9 @@ public class HexGridTool : BaseSignal
         if (Selection.activeObject != gameObject)
         {
             Mode = EnumHexGridMode.Generation;
+
+            Hex?.Enter.SetActive(false);
+
             HexWalkable.HideHexWalkableMap();
         }
     }
@@ -157,9 +161,9 @@ public class HexGridTool : BaseSignal
                 }
                 break;
             case EnumHexGridMode.Creation :
-                if(Ground && Event.type == EventType.MouseDown && Event.button == 0)
+                if(HexPrefab && Event.type == EventType.MouseDown && Event.button == 0)
                 {
-                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, Ground.gameObject, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
+                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, HexPrefab.gameObject, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
                     Event.Use();    
                 }
                 break;

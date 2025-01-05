@@ -54,7 +54,8 @@ public class HexGridToolEditor : Editor
         {
             case EnumHexGridMode.Generation:
                 HexGridTool.GenerationType = (EnumHexGridGenerationType)EditorGUILayout.EnumPopup("Generation Type", HexGridTool.GenerationType);
-                HexGridTool.Ground = (Hex)EditorGUILayout.ObjectField("Ground Prefab", HexGridTool.Ground, typeof(Hex), false);
+                HexGridTool.HexPrefab = (Hex)EditorGUILayout.ObjectField("Hex Prefab", HexGridTool.HexPrefab , typeof(Hex), false);
+                HexGridTool.StarterPaint = (MeshRenderer)EditorGUILayout.ObjectField("Starter Paint", HexGridTool.StarterPaint, typeof(MeshRenderer), false);
 
                 switch (HexGridTool.GenerationType)
                 {
@@ -82,10 +83,10 @@ public class HexGridToolEditor : Editor
                     switch (HexGridTool.GenerationType)
                     {
                         case EnumHexGridGenerationType.Hexagonal:
-                            HexGridTool.HexGridGenerator.GenerateHexagonalGrid(HexGridTool.ArenaRadius, HexGridTool.TargetHeight, HexGridTool.Ground);
+                            HexGridTool.HexGridGenerator.GenerateHexagonalGrid(HexGridTool.ArenaRadius, HexGridTool.TargetHeight, HexGridTool.HexPrefab );
                             break;
                         case EnumHexGridGenerationType.Square:
-                            HexGridTool.HexGridGenerator.GenerateHexagonalGridByDimensions(HexGridTool.SquareHeight, HexGridTool.SquareWidth, HexGridTool.TargetHeight, HexGridTool.Ground);
+                            HexGridTool.HexGridGenerator.GenerateHexagonalGridByDimensions(HexGridTool.SquareHeight, HexGridTool.SquareWidth, HexGridTool.TargetHeight, HexGridTool.HexPrefab , HexGridTool.StarterPaint);
                             break;
                         default: break;
                     }
@@ -175,7 +176,7 @@ public class HexGridToolEditor : Editor
             case EnumHexGridMode.Creation:
                 EditorGUILayout.LabelField("Creation Settings", EditorStyles.boldLabel);
 
-                HexGridTool.Ground = (Hex)EditorGUILayout.ObjectField("Ground Prefab", HexGridTool.Ground, typeof(Hex), false);
+                HexGridTool.HexPrefab = (Hex)EditorGUILayout.ObjectField("Hex Prefab", HexGridTool.HexPrefab, typeof(Hex), false);
                 HexGridTool.TargetHeight = EditorGUILayout.IntField("Target Height", Mathf.Clamp(HexGridTool.TargetHeight, 1, 50));
                 HexGridTool.TargetLenght = EditorGUILayout.IntField("Target Lenght", Mathf.Clamp(HexGridTool.TargetLenght, 1, 50));
 

@@ -72,11 +72,13 @@ public class Hex : Unit
     public void SetHexVisual(MeshRenderer NewHexVisual)
     {
         var NewHex = Instantiate(NewHexVisual, transform);
-        NewHex.transform.position = HexVisual.transform.position;
-        NewHex.transform.rotation = HexVisual.transform.rotation;
-        NewHex.transform.localScale = HexVisual.transform.localScale;
-
-        DestroyImmediate(HexVisual.gameObject);
+        if(HexVisual)
+        {
+            NewHex.transform.position = HexVisual.transform.position;
+            NewHex.transform.rotation = HexVisual.transform.rotation;
+            NewHex.transform.localScale = HexVisual.transform.localScale;  
+            DestroyImmediate(HexVisual.gameObject);        
+        }
 
         HexVisual = NewHex;
     }

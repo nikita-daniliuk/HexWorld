@@ -33,8 +33,8 @@ public class PathFinder : MonoBehaviour
                 }
                 break;
 
-            case PickUnitSignal PickUnitSignal:
-                TargetUnit = PickUnitSignal.Unit;
+            case UnitWalkSignal UnitWalkSignal:
+                TargetUnit = UnitWalkSignal.Unit;
                 if (TargetUnit.State != EnumUnitState.Stay) return;
                 GetHexesInRange(TargetUnit.GetComponentByType<MoveComponent>().CurrentTurnCount);
                 break;
@@ -43,6 +43,10 @@ public class PathFinder : MonoBehaviour
                 GetHexesInRadiusWithJump(JumpSignal.MoveComponent);
                 break;
 
+            case PickUnitSignal PickUnitSignal :
+                TargetUnit = PickUnitSignal.Unit;
+                break;
+                
             default: break;
         }
     }

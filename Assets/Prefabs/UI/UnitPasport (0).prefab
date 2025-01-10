@@ -583,7 +583,6 @@ GameObject:
   - component: {fileID: 3191599720207626741}
   - component: {fileID: 2839657715088773949}
   - component: {fileID: 8437545962791244182}
-  - component: {fileID: 1916938410177305194}
   m_Layer: 5
   m_Name: UnitPasport (0)
   m_TagString: Untagged
@@ -695,20 +694,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &1916938410177305194
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8023565639866877922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c0d493a480c979f448e4bb4b289ae71f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Button: {fileID: 8437545962791244182}
-  Master: {fileID: 0}
 --- !u!1 &8593858816580567441
 GameObject:
   m_ObjectHideFlags: 0

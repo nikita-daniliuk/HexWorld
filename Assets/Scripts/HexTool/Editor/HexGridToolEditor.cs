@@ -35,7 +35,7 @@ public class HexGridToolEditor : Editor
 
         Undo.RecordObject(HexGridTool, "Modify HexGridTool");
 
-        if (PreviousMode == EnumHexGridMode.Walkable && HexGridTool.Mode != EnumHexGridMode.Walkable)
+        if (PreviousMode == EnumHexGridMode.SetWalkable && HexGridTool.Mode != EnumHexGridMode.SetWalkable)
         {
             HexGridTool.HexWalkable.HideHexWalkableMap();
             EditorApplication.QueuePlayerLoopUpdate();
@@ -55,7 +55,15 @@ public class HexGridToolEditor : Editor
             case EnumHexGridMode.Generation:
                 HexGridTool.GenerationType = (EnumHexGridGenerationType)EditorGUILayout.EnumPopup("Generation Type", HexGridTool.GenerationType);
                 HexGridTool.HexPrefab = (Hex)EditorGUILayout.ObjectField("Hex Prefab", HexGridTool.HexPrefab , typeof(Hex), false);
-                HexGridTool.StarterPaint = (MeshRenderer)EditorGUILayout.ObjectField("Starter Paint", HexGridTool.StarterPaint, typeof(MeshRenderer), false);
+
+                if (HexGridTool.HexPaintOptions.Count == 0)
+                {
+                    EditorGUILayout.HelpBox("Warning! If you do not add a paint value in Paint mode, it will not work correctly.", MessageType.Warning);
+                } 
+                else
+                {
+                    ShowPaintPannel(HexGridTool);
+                }
 
                 switch (HexGridTool.GenerationType)
                 {
@@ -83,10 +91,10 @@ public class HexGridToolEditor : Editor
                     switch (HexGridTool.GenerationType)
                     {
                         case EnumHexGridGenerationType.Hexagonal:
-                            HexGridTool.HexGridGenerator.GenerateHexagonalGrid(HexGridTool.ArenaRadius, HexGridTool.TargetHeight, HexGridTool.HexPrefab );
+                            HexGridTool.HexGridGenerator.GenerateHexagonalGrid(HexGridTool.ArenaRadius, HexGridTool.TargetHeight, HexGridTool.HexPrefab, HexGridTool.HexPaintOptions);
                             break;
                         case EnumHexGridGenerationType.Square:
-                            HexGridTool.HexGridGenerator.GenerateHexagonalGridByDimensions(HexGridTool.SquareHeight, HexGridTool.SquareWidth, HexGridTool.TargetHeight, HexGridTool.HexPrefab , HexGridTool.StarterPaint);
+                            HexGridTool.HexGridGenerator.GenerateHexagonalGridByDimensions(HexGridTool.SquareHeight, HexGridTool.SquareWidth, HexGridTool.TargetHeight, HexGridTool.HexPrefab , HexGridTool.HexPaintOptions);
                             break;
                         default: break;
                     }
@@ -177,12 +185,22 @@ public class HexGridToolEditor : Editor
                 EditorGUILayout.LabelField("Creation Settings", EditorStyles.boldLabel);
 
                 HexGridTool.HexPrefab = (Hex)EditorGUILayout.ObjectField("Hex Prefab", HexGridTool.HexPrefab, typeof(Hex), false);
+
+                if (HexGridTool.HexPaintOptions.Count == 0)
+                {
+                    EditorGUILayout.HelpBox("Warning! If you do not add a paint value in Paint mode, it will not work correctly.", MessageType.Warning);
+                } 
+                else
+                {
+                    ShowPaintPannel(HexGridTool);
+                }
+
                 HexGridTool.TargetHeight = EditorGUILayout.IntField("Target Height", Mathf.Clamp(HexGridTool.TargetHeight, 1, 50));
                 HexGridTool.TargetLenght = EditorGUILayout.IntField("Target Lenght", Mathf.Clamp(HexGridTool.TargetLenght, 1, 50));
 
                 break;
 
-            case EnumHexGridMode.Walkable:
+            case EnumHexGridMode.SetWalkable:
 
                 EditorGUILayout.LabelField("Set Walkable Settings", EditorStyles.boldLabel);
 
@@ -228,6 +246,40 @@ public class HexGridToolEditor : Editor
         {
             Option.IsSelected = false;
         }
+    }
+
+    private void ShowPaintPannel(HexGridTool HexGridTool)
+    {
+        EditorGUILayout.Space();
+
+        Color OriginalColorGen = GUI.backgroundColor;
+        GUI.backgroundColor = IsEraseModeActive ? Color.green : OriginalColorGen;
+
+        GUI.backgroundColor = OriginalColorGen;
+
+        for (int i = 0; i < HexGridTool.HexPaintOptions.Count; i++)
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            string ButtonText = HexGridTool.HexPaintOptions[i].HexPrefab != null ? "Select" : "None";
+            GUI.backgroundColor = HexGridTool.HexPaintOptions[i].IsSelected ? Color.green : OriginalColorGen;
+
+            if (GUILayout.Button(ButtonText, GUILayout.Width(80)))
+            {
+                IsEraseModeActive = false;
+                HexGridTool.IsEraseMode = false;
+                SelectOption(HexGridTool.HexPaintOptions, i);
+            }
+
+            GUI.backgroundColor = OriginalColorGen;
+
+            GUILayout.FlexibleSpace();
+            HexGridTool.HexPaintOptions[i].HexPrefab = (MeshRenderer)EditorGUILayout.ObjectField("", HexGridTool.HexPaintOptions[i].HexPrefab, typeof(MeshRenderer), false, GUILayout.ExpandWidth(true));
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        EditorGUILayout.Space();        
     }
 }
 #endif

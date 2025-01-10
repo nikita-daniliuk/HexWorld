@@ -3,36 +3,27 @@ using UnityEngine;
 
 public class HexPainter : MonoBehaviour
 {
-    public void HandlePainting(Hex Hex, bool IsEraseMode, List<HexPaintOption> HexPaintOptions)
+    public void HandlePainting(Hex Hex, List<HexPaintOption> HexPaintOptions)
     {
-        if (IsEraseMode)
+        if (!Hex.HexVisual.enabled)
         {
-            Hex.HexVisual.enabled = false;
-            Hex.SetHeight(1);
-            Hex.SetIsWalkable(true);
+            Hex.HexVisual.enabled = true;
+            Hex.SetIsWalkable(false);
         }
-        else
+
+        MeshRenderer SelectedHex = null;
+        foreach (var Option in HexPaintOptions)
         {
-            if (!Hex.HexVisual.enabled)
+            if (Option.IsSelected && Option.HexPrefab != null)
             {
-                Hex.HexVisual.enabled = true;
-                Hex.SetIsWalkable(false);
+                SelectedHex = Option.HexPrefab;
+                break;
             }
+        }
 
-            MeshRenderer SelectedHex = null;
-            foreach (var Option in HexPaintOptions)
-            {
-                if (Option.IsSelected && Option.HexPrefab != null)
-                {
-                    SelectedHex = Option.HexPrefab;
-                    break;
-                }
-            }
-
-            if (SelectedHex != null && SelectedHex.sharedMaterial != Hex.HexVisual.sharedMaterial)
-            {
-                Hex.SetHexVisual(SelectedHex);
-            }
+        if (SelectedHex != null && SelectedHex.sharedMaterial != Hex.HexVisual.sharedMaterial)
+        {
+            Hex.SetHexVisual(SelectedHex);
         }
     }
 }

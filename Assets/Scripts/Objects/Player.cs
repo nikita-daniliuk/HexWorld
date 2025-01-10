@@ -36,9 +36,4 @@ public class Player : Unit
 
         EmitSignal(Obj);
     }
-
-    void OnMouseDown()
-    {
-        GetSystemByType<EventBus>().Invoke(new PickUnitSignal(this));
-    }
 }

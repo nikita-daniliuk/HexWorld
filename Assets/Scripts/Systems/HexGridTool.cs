@@ -10,7 +10,6 @@ using UnityEngine;
 public class HexGridTool : BaseSignal
 {
     public Hex HexPrefab;
-    public MeshRenderer StarterPaint;
     public EnumHexGridGenerationType GenerationType;
     public EnumHexGridMode Mode;
     public EnumTransformTool TransformTool;
@@ -48,15 +47,21 @@ public class HexGridTool : BaseSignal
         HexCreator = gameObject.GetComponent<HexCreator>();
         HexWalkable = gameObject.GetComponent<HexWalkable>();
 
+        #if UNITY_EDITOR
+        if(Application.isPlaying) return;
         Selection.selectionChanged += OnSelectionChanged;
         SceneView.duringSceneGui += OnSceneGUI;
+        #endif
     }
 
     private void OnDisable()
     {
+        #if UNITY_EDITOR
+        if(Application.isPlaying) return;
         Selection.selectionChanged -= OnSelectionChanged;
         SceneView.duringSceneGui -= OnSceneGUI;
         Mode = EnumHexGridMode.Generation;
+        #endif
     }
 
     private void OnSelectionChanged()
@@ -67,10 +72,13 @@ public class HexGridTool : BaseSignal
 
             Hex?.Enter.SetActive(false);
 
+            Hex = null;
+
             HexWalkable.HideHexWalkableMap();
         }
     }
 
+    #if UNITY_EDITOR
     private void OnSceneGUI(SceneView sceneView)
     {
         if (Application.isPlaying || Selection.activeObject != gameObject)
@@ -78,7 +86,7 @@ public class HexGridTool : BaseSignal
 
         Event Event = Event.current;
 
-        Hex?.Enter.SetActive(false);
+        if(Hex) Hex.Enter.SetActive(false);
 
         Hex = HexRay(Event, out RaycastHit Hit);
 
@@ -100,25 +108,25 @@ public class HexGridTool : BaseSignal
             infoStyle.normal.textColor = Color.white;
             infoStyle.fontStyle = FontStyle.Bold;
 
-            GUILayout.Label("Hex Information", infoStyle);
+            GUILayout.Label(" Hex Information", infoStyle);
 
-            GUILayout.Label($"Position: X: {Hex.Position.x}  Y: {Hex.Position.y}  Z: {Hex.Position.z}", infoStyle);
-            GUILayout.Label($"Length: {Hex.Lenght}", infoStyle);
-            GUILayout.Label($"IsWalkable: {(Hex.IsWalkable ? "Yes" : "No")}", infoStyle);
+            GUILayout.Label($" Position: X: {Hex.Position.x}  Y: {Hex.Position.y}  Z: {Hex.Position.z}", infoStyle);
+            GUILayout.Label($" Length: {Hex.Lenght}", infoStyle);
+            GUILayout.Label($" IsWalkable: {(Hex.IsWalkable ? "Yes" : "No")}", infoStyle);
 
             GUILayout.Space(10);
-            GUILayout.Label("Connected Hexes", infoStyle);
+            GUILayout.Label(" Connected Hexes", infoStyle);
             if (Hex.ConnectedHexes != null && Hex.ConnectedHexes.Count > 0)
             {
                 foreach (var ConnectedHex in Hex.ConnectedHexes)
                 {
                     string HexName = ConnectedHex.HexVisual != null ? ConnectedHex.HexVisual.name.Replace("(Clone)", "").Trim() : "Unnamed Hex";
-                    GUILayout.Label($"{HexName} - X: {ConnectedHex.Position.x}, Y: {ConnectedHex.Position.y}, Z: {ConnectedHex.Position.z}", infoStyle);
+                    GUILayout.Label($" {HexName} - X: {ConnectedHex.Position.x}, Y: {ConnectedHex.Position.y}, Z: {ConnectedHex.Position.z}", infoStyle);
                 }
             }
             else
             {
-                GUILayout.Label("No connected hexes.", infoStyle);
+                GUILayout.Label(" No connected hexes.", infoStyle);
             }
             GUILayout.EndArea();
             Handles.EndGUI();
@@ -138,7 +146,7 @@ public class HexGridTool : BaseSignal
                         }
                         else
                         {
-                            HexPainter.HandlePainting(Hex, IsEraseMode, HexPaintOptions);
+                            HexPainter.HandlePainting(Hex, HexPaintOptions);
                         }                  
                     }
                     Event.Use();
@@ -163,11 +171,11 @@ public class HexGridTool : BaseSignal
             case EnumHexGridMode.Creation :
                 if(HexPrefab && Event.type == EventType.MouseDown && Event.button == 0)
                 {
-                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, HexPrefab.gameObject, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
+                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, HexPrefab.gameObject, HexPaintOptions, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
                     Event.Use();    
                 }
                 break;
-            case EnumHexGridMode.Walkable :
+            case EnumHexGridMode.SetWalkable :
                 if((Event.type == EventType.MouseDown || Event.type == EventType.MouseDrag) && Event.button == 0)
                 {
                     if(Hex)
@@ -196,4 +204,5 @@ public class HexGridTool : BaseSignal
         Hit = hit;
         return Hex;
     }
+    #endif
 }

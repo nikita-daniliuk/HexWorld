@@ -29,6 +29,7 @@ public class HexCreator : BaseSignal
             if (nearHexes != null)
                 neighbors.UnionWith(nearHexes);
         }
+
         hex.SetNeighborHexes(neighbors);
 
         foreach (Hex neighbor in hex.ConnectedHexes)
@@ -38,17 +39,18 @@ public class HexCreator : BaseSignal
         }
     }
 
-    public void CreateHexNeighbor(
+    public GameObject CreateHexNeighbor(
         Hex hitHex,
         RaycastHit hit,
         GameObject hexPrefab,
+        List<HexPaintOption> HexPaintOptions,
         int targetHeight,
         int targetLength,
         int gridWidth,
         int gridHeight
     )
     {
-        if (!FindHexParent()) return;
+        if (!FindHexParent()) return null;
 
         float angle = Vector3.Angle(hit.normal, Vector3.up);
         bool clickedOnTop = angle < 30f;
@@ -62,7 +64,7 @@ public class HexCreator : BaseSignal
             newCoords = new Vector3Int(hitHex.Position.x, newTop, hitHex.Position.z);
 
             if (!IsValidHexPosition(newCoords, newTop, targetLength))
-                return;
+                return null;
 
             targetHeight = newTop;
         }
@@ -80,7 +82,7 @@ public class HexCreator : BaseSignal
             newCoords = hitHex.Position + closestDirection;
 
             if (!IsValidHexPosition(newCoords, targetHeight, targetLength))
-                return;
+                return null;
         }
 
         Vector3 spawnPosition = HexToPosition(newCoords, gridWidth, gridHeight);
@@ -88,22 +90,38 @@ public class HexCreator : BaseSignal
         GameObject newHex = Instantiate(hexPrefab, HexParent.transform);
         newHex.transform.position = spawnPosition;
 
+        MeshRenderer SelectedHex = null;
+        foreach (var Option in HexPaintOptions)
+        {
+            if (Option.IsSelected && Option.HexPrefab != null)
+            {
+                SelectedHex = Option.HexPrefab;
+                break;
+            }
+        }
+
         Hex newHexComponent = newHex.GetComponent<Hex>();
         newHexComponent.Initialization(new HashSet<object> { newCoords });
         newHexComponent.SetHeight(targetHeight);
         newHexComponent.SetLength(targetLength);
+        newHexComponent.SetHexVisual(SelectedHex);
+        hitHex.SetIsWalkable(!(hitHex.Position.y == newHexComponent.Position.y - newHexComponent.Lenght));
         newHexComponent.UpdateEmblemPosition();
 
         AllHexes = HexParent.GetComponentsInChildren<Hex>().ToList();
         AllHexes.Add(newHexComponent);
 
         ConnectNeighborHexes(newHexComponent);
+
+        return newHex;
     }
 
     private bool IsValidHexPosition(Vector3Int coords, int targetHeight, int targetLength)
     {
         int newStart = targetHeight - targetLength + 1;
         int newEnd   = targetHeight;
+
+        if(AllHexes.Count == 0) AllHexes = HexParent.GetComponentsInChildren<Hex>().ToList();
 
         var sameXZHexes = AllHexes
             .Where(h => h.Position.x == coords.x && h.Position.z == coords.z)

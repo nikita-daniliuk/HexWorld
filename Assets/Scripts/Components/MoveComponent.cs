@@ -84,27 +84,25 @@ public class MoveComponent : Components, IFixedUpdate
                         break;
                     default: break;
                 }
-
                 break;
 
             case EnumSignals.NextTurn:
                 _CurrentTurnCount = _MaxStepsPerTurn;
                 break;
-
+            
+            case UnitJumpSignal JumpSignal :
+                if(Master.State == EnumUnitState.Stay)
+                {
+                    EmitSignal(EnumMoveSignals.StartJump);
+                    EventBus.Invoke(new JumpSignal(this));
+                }                        
+                break;             
             default: break;
         }
     }
 
     public void FixedRefresh() => Move();
 
-    void Update()
-    {
-        if(Input.GetKeyDown(KeyCode.V) && Master.State == EnumUnitState.Stay)
-        {
-            EmitSignal(EnumMoveSignals.StartJump);
-            EventBus.Invoke(new JumpSignal(this));
-        }
-    }
 
     IEnumerator JumpMoveCoroutine(Vector3 startPosition, Vector3 endPosition, float duration)
     {

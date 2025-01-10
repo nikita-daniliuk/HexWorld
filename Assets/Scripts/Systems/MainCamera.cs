@@ -1,15 +1,14 @@
-using System.Linq;
 using UnityEngine;
 using Zenject;
 
 public class MainCamera : MonoBehaviour
 {
-    [Inject] Pool Pool;
+    [Inject] EventBus EventBus;
 
     [Header("Horizontal Movement / Rotation")]
     public float MoveSpeed = 10f;
-    public float RotationSpeed = 5f; // Скорость вращения
-    public float RotationSmoothSpeed = 5f; // Плавность вращения
+    public float RotationSpeed = 5f;
+    public float RotationSmoothSpeed = 5f;
     public float HorizontalSmoothSpeed = 5f;
 
     [Header("Vertical Movement")]
@@ -36,18 +35,32 @@ public class MainCamera : MonoBehaviour
     private bool IsDragging;
     private bool IsRotating;
 
-    void Start()
+    void Awake()
     {
+        EventBus.Subscribe(SignalBox);
+
         Cam = GetComponent<Camera>();
         TargetPosition = transform.position;
         TargetRotationY = transform.eulerAngles.y;
         CurrentDistance = (MaxDistance + MinDistance) / 2f;
+    }
 
-        Player = Pool.GetAllOfType<Player>().FirstOrDefault();
+    void SignalBox(object Obj)
+    {
+        switch (Obj)
+        {
+            case PickUnitSignal PickUnitSignal :
+                Player = PickUnitSignal.Unit as Player;
+                TargetPosition = new Vector3(Player.transform.position.x, transform.position.y, Player.transform.position.z) - new Vector3(transform.forward.x, 0, transform.forward.z) * 15f;
+                break;
+            default: break;
+        }
     }
 
     void Update()
     {
+        if(!Player) return;
+
         HandleMouseInput();
         HandleZoom();
         UpdateSpringArm();
@@ -141,5 +154,10 @@ public class MainCamera : MonoBehaviour
         transform.position = smoothedPosition;
 
         transform.rotation = Quaternion.Euler(60f, TargetRotationY, 0f);
+    }
+    
+    void OnDestroy()
+    {
+        EventBus.Unsubscribe(SignalBox);
     }
 }

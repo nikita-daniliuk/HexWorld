@@ -13,7 +13,7 @@ public class PlayerSpawner : MonoBehaviour
 
     [SerializeField] Unit PlayerPrefab;
 
-    void Awake() => Spawn();
+    void Start() => Invoke(nameof(Spawn), 1f);
 
     void Spawn()
     {
@@ -33,5 +33,7 @@ public class PlayerSpawner : MonoBehaviour
         }); 
 
         Player.GetComponentByType<MoveComponent>().Position = RandomHex.Position;
+
+        EventBus.Invoke(Player);
     }
 }

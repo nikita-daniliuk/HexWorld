@@ -46,6 +46,7 @@ public class HexWalkable : BaseSignal
         {
             Hex.Walkable.gameObject.SetActive(false);
             Hex.NotWalkable.gameObject.SetActive(false);
+            Hex.Enter.gameObject.SetActive(false);
         }   
 
         IsShowing = false;       

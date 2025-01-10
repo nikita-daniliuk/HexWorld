@@ -13,4 +13,10 @@ public class Message
         this.Sender = Sender;
         this.Data = Data;
     }
+
+    public Message(GameObject Sender, object Data)
+    {
+        this.Sender = Sender;
+        this.Data = Data;
+    }
 }

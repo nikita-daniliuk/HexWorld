@@ -10,6 +10,7 @@ public class SceneLoader : ISystems
     {
         this.EventBus = EventBus;
         this.EventBus.Subscribe(SignalBox);
+        LoadGame();
     }
     
     protected void SignalBox(object Obj)

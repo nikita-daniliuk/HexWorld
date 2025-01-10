@@ -6,7 +6,7 @@ public class HexGridGenerator : BaseSignal
     public Dictionary<Vector3Int, Hex> HexDictionary = new Dictionary<Vector3Int, Hex>();
     private GameObject HexParent;
 
-    public void GenerateHexagonalGrid(int ArenaRadius, int TargetHeight, Hex Ground)
+    public void GenerateHexagonalGrid(int ArenaRadius, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
     {
         ClearHexGrid();
         FindOrCreateHexParent();
@@ -26,6 +26,18 @@ public class HexGridGenerator : BaseSignal
 
                 Hex.Initialization(new HashSet<object> { Coords });
 
+                MeshRenderer SelectedHex = null;
+                foreach (var Option in HexPaintOptions)
+                {
+                    if (Option.IsSelected && Option.HexPrefab != null)
+                    {
+                        SelectedHex = Option.HexPrefab;
+                        break;
+                    }
+                }
+
+                Hex.SetHexVisual(SelectedHex);
+
                 Hex.SetHeight(TargetHeight);
 
                 Hex.SetLength(TargetHeight);
@@ -38,7 +50,7 @@ public class HexGridGenerator : BaseSignal
         HexParent.name = "Hex";
     }
 
-    public void GenerateHexagonalGridByDimensions(int SquareHeight, int SquareWidth, int TargetHeight, Hex Ground, MeshRenderer StarterPaint)
+    public void GenerateHexagonalGridByDimensions(int SquareHeight, int SquareWidth, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
     {
         ClearHexGrid();
         FindOrCreateHexParent();
@@ -62,7 +74,17 @@ public class HexGridGenerator : BaseSignal
 
                 Hex.Initialization(new HashSet<object> { Coords });
 
-                Hex.SetHexVisual(StarterPaint);
+                MeshRenderer SelectedHex = null;
+                foreach (var Option in HexPaintOptions)
+                {
+                    if (Option.IsSelected && Option.HexPrefab != null)
+                    {
+                        SelectedHex = Option.HexPrefab;
+                        break;
+                    }
+                }
+
+                Hex.SetHexVisual(SelectedHex);
 
                 Hex.SetHeight(TargetHeight);
 

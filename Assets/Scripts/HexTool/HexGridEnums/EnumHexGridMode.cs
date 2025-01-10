@@ -4,5 +4,5 @@ public enum EnumHexGridMode
     Creation,
     Transform,
     Paint,
-    Walkable
+    SetWalkable
 }

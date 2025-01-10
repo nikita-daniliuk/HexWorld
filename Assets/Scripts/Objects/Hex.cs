@@ -71,7 +71,10 @@ public class Hex : Unit
 
     public void SetHexVisual(MeshRenderer NewHexVisual)
     {
+        if(NewHexVisual == null) return;
+
         var NewHex = Instantiate(NewHexVisual, transform);
+
         if(HexVisual)
         {
             NewHex.transform.position = HexVisual.transform.position;

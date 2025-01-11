@@ -167,98 +167,133 @@ public class PathFinder : MonoBehaviour
         return Result;
     }
 
-    public HashSet<Hex> GetHexesInRadiusWithJump(MoveComponent MoveComponent)
+public HashSet<Hex> GetHexesInRadiusWithJump(MoveComponent MoveComponent)
+{
+    var AllHexes = Pool.GetAllOfType<Hex>();
+
+    foreach (Hex Hex in AllHexes) Hex.SetPickState(false);
+
+    Hex CenterHex = AllHexes.FirstOrDefault(h => h.Position == MoveComponent.Position);
+    if (CenterHex == null)
     {
-        var AllHexes = Pool.GetAllOfType<Hex>();
+        Debug.LogError("CenterHex is null!");
+        return new HashSet<Hex>();
+    }
 
-        foreach (Hex Hex in AllHexes) Hex.SetPickState(false);
+    Vector3Int CenterPos = CenterHex.Position;
+    int CenterHeight = CenterHex.Position.y; // Эталонная высота
 
-        Hex CenterHex = AllHexes.FirstOrDefault(h => h.Position == MoveComponent.Position);
-        if (CenterHex == null)
+    HashSet<Hex> Result = new HashSet<Hex>();
+
+    // Сохраняем все гексы в словаре для быстрого доступа
+    var HexDictionary = AllHexes.GroupBy(h => new Vector2Int(h.Position.x, h.Position.z))
+        .ToDictionary(g => g.Key, g => g.First());
+
+    // Радиальная система
+    for (int radius = 1; radius <= MoveComponent.JumpLength; radius++)
+    {
+        // Получаем гексы на текущем уровне радиуса
+        List<Vector3Int> Ring = GetHexRing(CenterPos, radius);
+
+        foreach (var TargetPos in Ring)
         {
-            Debug.LogError("CenterHex is null!");
-            return new HashSet<Hex>();
-        }
+            if (!HexDictionary.TryGetValue(new Vector2Int(TargetPos.x, TargetPos.z), out Hex TargetHex)) continue;
 
-        Vector3Int CenterPos = CenterHex.Position;
-        int CenterHeight = CenterHex.Position.y;
+            if (!TargetHex.IsWalkable) continue;
 
-        HashSet<Hex> Result = new HashSet<Hex>();
+            int TotalCost = 0;
 
-        Dictionary<Vector3Int, (int Cost, int MaxHeightSoFar)> CostMap = new Dictionary<Vector3Int, (int, int)>();
-        CostMap[CenterPos] = (0, CenterHeight);
+            // Построение пути к целевому гексу
+            List<Vector3Int> Path = GetPathBetweenHexes(CenterPos, TargetPos);
 
-        Queue<Vector3Int> Queue = new Queue<Vector3Int>();
-        Queue.Enqueue(CenterPos);
+            bool IsPathBlocked = false;
 
-        var HexDictionary = AllHexes.GroupBy(h => new Vector2Int(h.Position.x, h.Position.z)).ToDictionary(g => g.Key, g => g.ToList());                  
-
-        while (Queue.Count > 0)
-        {
-            Vector3Int CurrentPos = Queue.Dequeue();
-            (int CurrentCost, int MaxHeightSoFar) = CostMap[CurrentPos];
-
-            foreach (var Direction in HexLibrary.GetHexDirections())
+            foreach (var StepPos in Path)
             {
-                Vector3Int NeighborPos = CurrentPos + Direction;
-                Vector2Int Key = new Vector2Int(NeighborPos.x, NeighborPos.z);
+                Vector2Int Key = new Vector2Int(StepPos.x, StepPos.z);
 
-                if (!HexDictionary.TryGetValue(Key, out List<Hex> MatchingHexes))
+                if (!HexDictionary.TryGetValue(Key, out Hex CurrentHex))
                 {
-                    int VirtualCost = CurrentCost + GetJumpOverCost();
-
-                    if (VirtualCost > MoveComponent.JumpLength) continue;
-
-                    if (CostMap.ContainsKey(NeighborPos) && CostMap[NeighborPos].Cost <= VirtualCost) continue;
-                        
-                    CostMap[NeighborPos] = (VirtualCost, MaxHeightSoFar);
-                    Queue.Enqueue(NeighborPos);
+                    // Если клетка отсутствует (разрыв), добавляем минимальную стоимость (как ровная поверхность)
+                    TotalCost += GetFlatOrDownCost(); // Разрыв как ровная поверхность
                     continue;
                 }
 
-                foreach (var TargetHex in MatchingHexes)
+                int CurrentHeight = CurrentHex.Position.y;
+
+                if (CurrentHeight > CenterHeight)
                 {
-                    if (!TargetHex.IsWalkable || (TargetHex.Position.x == CenterHex.Position.x && TargetHex.Position.z == CenterHex.Position.z)) continue;
+                    // Если текущий гекс выше эталонной высоты, добавляем разницу высот
+                    int HeightDifference = CurrentHeight - CenterHeight;
+                    TotalCost += HeightDifference;
+                }
+                else
+                {
+                    // Если текущий гекс ниже или на уровне эталонной высоты, считаем его как ровный
+                    TotalCost += GetFlatOrDownCost();
+                }
 
-                    int TargetHeight = TargetHex.Position.y;
-
-                    int NewMaxHeight = Mathf.Max(MaxHeightSoFar, TargetHeight);
-
-                    int StepCost = ComputeStepCost(MaxHeightSoFar, TargetHeight);
-                    int TotalCost = CurrentCost + StepCost;
-
-                    if (TotalCost > MoveComponent.JumpLength) continue;
-
-                    if (CostMap.ContainsKey(TargetHex.Position) && CostMap[TargetHex.Position].Cost <= TotalCost) continue;
-            
-                    CostMap[TargetHex.Position] = (TotalCost, NewMaxHeight);
-
-                    Result.Add(TargetHex);
-                    Queue.Enqueue(TargetHex.Position);
+                // Если общая стоимость уже превысила JumpLength, блокируем путь
+                if (TotalCost > MoveComponent.JumpLength)
+                {
+                    IsPathBlocked = true;
+                    break;
                 }
             }
+
+            // Если путь заблокирован, игнорируем этот гекс
+            if (IsPathBlocked) continue;
+
+            // Если путь доступен, добавляем гекс в результат
+            Result.Add(TargetHex);
         }
-
-        foreach (Hex Hex in Result) Hex.SetPickState(true);
-
-        return Result;
     }
 
-    private int GetJumpOverCost() => 1;
+    // Устанавливаем состояние подсветки для всех гексов
+    foreach (Hex Hex in Result) Hex.SetPickState(true);
 
-    private int ComputeStepCost(int MaxHeightSoFar, int TargetHeight)
+    return Result;
+}
+
+private List<Vector3Int> GetHexRing(Vector3Int Center, int Radius)
+{
+    List<Vector3Int> Ring = new List<Vector3Int>();
+
+    // Берём стартовую позицию (одна из шести направлений на нужном радиусе)
+    Vector3Int Current = Center + HexLibrary.GetHexDirections()[4] * Radius;
+
+    // Проходим по шести направлениям, чтобы обойти весь радиус
+    foreach (var Direction in HexLibrary.GetHexDirections())
     {
-        if (TargetHeight <= MaxHeightSoFar)
+        for (int i = 0; i < Radius; i++)
         {
-            return GetFlatOrDownCost();
-        }
-        else
-        {
-            return ComputeJumpCost(MaxHeightSoFar, TargetHeight);
+            Ring.Add(Current);
+            Current += Direction;
         }
     }
 
-    private int ComputeJumpCost(int CurrentHeight, int TargetHeight) => TargetHeight - CurrentHeight;
+    return Ring;
+}
 
-    private int GetFlatOrDownCost() => 1;
+private List<Vector3Int> GetPathBetweenHexes(Vector3Int Start, Vector3Int End)
+{
+    // Алгоритм построения прямого пути между двумя гексами (например, Bresenham для гексагонов)
+    List<Vector3Int> Path = new List<Vector3Int>();
+
+    int N = Mathf.Max(Mathf.Abs(Start.x - End.x), Mathf.Abs(Start.y - End.y), Mathf.Abs(Start.z - End.z));
+    for (int i = 1; i <= N; i++)
+    {
+        float t = i / (float)N;
+        int x = Mathf.RoundToInt(Mathf.Lerp(Start.x, End.x, t));
+        int y = Mathf.RoundToInt(Mathf.Lerp(Start.y, End.y, t));
+        int z = Mathf.RoundToInt(Mathf.Lerp(Start.z, End.z, t));
+        Path.Add(new Vector3Int(x, y, z));
+    }
+
+    return Path;
+}
+
+private int GetFlatOrDownCost() => 1; // Перемещение по ровной поверхности или вниз
+
+private int GetJumpOverCost() => 1; // Стоимость прыжка через разрыв
 }

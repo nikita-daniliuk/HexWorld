@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using Zenject;
 
 public class HexWalkable : BaseSignal
 {
+    [Inject] Pool Pool;
+
     private Transform HexParent;
-    [SerializeField, HideInInspector] private List<Hex> AllHexes = new List<Hex>();
+    [SerializeField, HideInInspector] private HashSet<Hex> AllHexes = new HashSet<Hex>();
 
     bool IsShowing;
 
@@ -27,7 +30,7 @@ public class HexWalkable : BaseSignal
         if(!IsShowing)
         {
             FindHexParent();
-            AllHexes = HexParent.GetComponentsInChildren<Hex>().ToList();
+            AllHexes = HexParent.GetComponentsInChildren<Hex>().ToHashSet();
 
             foreach (var Hex in AllHexes) SetWalkableMap(Hex);    
             IsShowing = true;        
@@ -42,6 +45,16 @@ public class HexWalkable : BaseSignal
 
     public void HideHexWalkableMap()
     {
+        if(!Application.isPlaying)
+        {
+            FindHexParent();
+            AllHexes = HexParent.GetComponentsInChildren<Hex>().ToHashSet();
+        }
+        else
+        {
+            AllHexes = Pool.GetAllOfType<Hex>().ToHashSet();
+        }
+
         foreach (var Hex in AllHexes)
         {
             Hex.Walkable.gameObject.SetActive(false);

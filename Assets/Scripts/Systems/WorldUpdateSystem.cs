@@ -1,84 +1,78 @@
 using System.Collections.Generic;
-using System.Diagnostics;
-using Zenject;
+using System;
 
-public sealed class WorldUpdateSystem : IFixedTickable, ISystems
+public sealed class WorldUpdateSystem
 {
-    private readonly HashSet<IFixedUpdate> fixedUpdatesObj = new HashSet<IFixedUpdate>();
-
-    private readonly List<IFixedUpdate> toRemoveFixed = new List<IFixedUpdate>();
-    private readonly List<IFixedUpdate> toAddFixed = new List<IFixedUpdate>();
-
-    private bool isUpdating;
+    private readonly HashSet<IFixedUpdate> FixedUpdatesObj = new HashSet<IFixedUpdate>();
+    private readonly List<IFixedUpdate> ToRemoveFixed = new List<IFixedUpdate>();
+    private readonly List<IFixedUpdate> ToAddFixed = new List<IFixedUpdate>();
+    private bool IsUpdating;
 
     public void FixedTick()
     {
-        isUpdating = true;
-        ProcessPendingUpdates(fixedUpdatesObj, toAddFixed, toRemoveFixed, obj => obj.FixedRefresh());
-        isUpdating = false;
+        IsUpdating = true;
+        ProcessPendingUpdates(FixedUpdatesObj, ToAddFixed, ToRemoveFixed, Obj => Obj.FixedRefresh());
+        IsUpdating = false;
     }
 
-    private void ProcessPendingUpdates<T>(HashSet<T> mainSet, List<T> toAdd, List<T> toRemove, System.Action<T> action)
+    private void ProcessPendingUpdates<T>(HashSet<T> MainSet, List<T> ToAdd, List<T> ToRemove, Action<T> Action)
     {
-        if (isUpdating)
+        if (ToAdd.Count > 0)
         {
-            if (toAdd.Count > 0)
-            {
-                mainSet.UnionWith(toAdd);
-                toAdd.Clear();
-            }
+            MainSet.UnionWith(ToAdd);
+            ToAdd.Clear();
+        }
 
-            if (toRemove.Count > 0)
+        List<T> ToRemoveNow = new List<T>();
+
+        foreach (var Obj in MainSet)
+        {
+            Action(Obj);
+
+            if (ToRemove.Contains(Obj))
             {
-                mainSet.ExceptWith(toRemove);
-                toRemove.Clear();
+                ToRemoveNow.Add(Obj);
             }
+        }
+
+        foreach (var Obj in ToRemoveNow)
+        {
+            MainSet.Remove(Obj);
+        }
+
+        ToRemove.Clear();
+    }
+
+    public void Subscribe(IFixedUpdate Obj)
+    {
+        if (ToRemoveFixed.Contains(Obj))
+        {
+            ToRemoveFixed.Remove(Obj);
+        }
+
+        if (IsUpdating)
+        {
+            if (!ToAddFixed.Contains(Obj))
+                ToAddFixed.Add(Obj);
         }
         else
         {
-            foreach (var obj in toAdd)
-            {
-                mainSet.Add(obj);
-            }
-            toAdd.Clear();
-
-            foreach (var obj in toRemove)
-            {
-                mainSet.Remove(obj);
-            }
-            toRemove.Clear();
-        }
-
-        foreach (var obj in mainSet)
-        {
-            action(obj);
+            FixedUpdatesObj.Add(Obj);
         }
     }
 
-    public void Subscribe(IFixedUpdate obj)
+    public void Unsubscribe(IFixedUpdate Obj)
     {
-        if (isUpdating)
+        if (IsUpdating)
         {
-            toAddFixed.Add(obj);
+            if (!ToRemoveFixed.Contains(Obj))
+                ToRemoveFixed.Add(Obj);
         }
         else
         {
-            fixedUpdatesObj.Add(obj);
+            FixedUpdatesObj.Remove(Obj);
         }
     }
 
-
-    public void Unsubscribe(IFixedUpdate obj)
-    {
-        if (isUpdating)
-        {
-            toRemoveFixed.Add(obj);
-        }
-        else
-        {
-            fixedUpdatesObj.Remove(obj);
-        }
-    }
-
-    public bool IsSubscribe(IFixedUpdate obj) => fixedUpdatesObj.Contains(obj);
+    public bool IsSubscribe(IFixedUpdate Obj) => FixedUpdatesObj.Contains(Obj);
 }

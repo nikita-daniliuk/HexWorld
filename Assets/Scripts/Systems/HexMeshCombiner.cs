@@ -14,16 +14,16 @@ public class HexMeshCombiner : BaseSignal
 
     void Start()
     {
-        var UnWalkableHexes = Pool.GetAllOfType<Hex>().Where(x => !x.IsWalkable).ToHashSet();
+        var UnWalkableHexes = Pool.GetAllOfType<Hex>().Where(X => !X.IsWalkable).ToHashSet();
 
-        foreach (Hex hex in UnWalkableHexes)
+        foreach (Hex Hex in UnWalkableHexes)
         {
-            MeshFilter meshFilter = hex.HexVisual.GetComponent<MeshFilter>();
+            MeshFilter MeshFilter = Hex.HexVisual.GetComponent<MeshFilter>();
 
-            if (meshFilter != null)
+            if (MeshFilter != null)
             {
-                OriginalHexFilters.Add(meshFilter);
-                HiddenHexes.Add(hex);
+                OriginalHexFilters.Add(MeshFilter);
+                HiddenHexes.Add(Hex);
             }
         }
 
@@ -31,9 +31,9 @@ public class HexMeshCombiner : BaseSignal
         {
             CombineMeshes();
 
-            foreach (var hex in HiddenHexes)
+            foreach (var Hex in HiddenHexes)
             {
-                hex.gameObject.SetActive(false);
+                Hex.gameObject.SetActive(false);
             }
         }
     }
@@ -44,32 +44,32 @@ public class HexMeshCombiner : BaseSignal
         {
             Destroy(CombinedMeshObject);
 
-            foreach (var hex in HiddenHexes)
+            foreach (var Hex in HiddenHexes)
             {
-                hex.gameObject.SetActive(true);
+                Hex.gameObject.SetActive(true);
             }
         }
     }
 
     void CombineMeshes()
     {
-        CombineInstance[] combine = new CombineInstance[OriginalHexFilters.Count];
+        CombineInstance[] Combine = new CombineInstance[OriginalHexFilters.Count];
 
-        for (int i = 0; i < OriginalHexFilters.Count; i++)
+        for (int I = 0; I < OriginalHexFilters.Count; I++)
         {
-            combine[i].mesh = OriginalHexFilters[i].sharedMesh;
-            combine[i].transform = OriginalHexFilters[i].transform.localToWorldMatrix;
+            Combine[I].mesh = OriginalHexFilters[I].sharedMesh;
+            Combine[I].transform = OriginalHexFilters[I].transform.localToWorldMatrix;
         }
 
         CombinedMeshObject = new GameObject("CombinedHexMesh");
-        MeshFilter combinedMeshFilter = CombinedMeshObject.AddComponent<MeshFilter>();
-        MeshRenderer combinedMeshRenderer = CombinedMeshObject.AddComponent<MeshRenderer>();
+        MeshFilter CombinedMeshFilter = CombinedMeshObject.AddComponent<MeshFilter>();
+        MeshRenderer CombinedMeshRenderer = CombinedMeshObject.AddComponent<MeshRenderer>();
 
-        Mesh combinedMesh = new Mesh();
-        combinedMesh.CombineMeshes(combine);
-        combinedMeshFilter.mesh = combinedMesh;
+        Mesh CombinedMesh = new Mesh();
+        CombinedMesh.CombineMeshes(Combine);
+        CombinedMeshFilter.mesh = CombinedMesh;
 
-        combinedMeshRenderer.material = OriginalHexFilters[0].GetComponent<MeshRenderer>().material;
+        CombinedMeshRenderer.material = OriginalHexFilters[0].GetComponent<MeshRenderer>().material;
 
         EmitSignal(new Message(gameObject, $"Combined meshes: {OriginalHexFilters.Count}"));
     }

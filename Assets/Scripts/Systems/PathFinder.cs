@@ -167,133 +167,117 @@ public class PathFinder : MonoBehaviour
         return Result;
     }
 
-public HashSet<Hex> GetHexesInRadiusWithJump(MoveComponent MoveComponent)
-{
-    var AllHexes = Pool.GetAllOfType<Hex>();
-
-    foreach (Hex Hex in AllHexes) Hex.SetPickState(false);
-
-    Hex CenterHex = AllHexes.FirstOrDefault(h => h.Position == MoveComponent.Position);
-    if (CenterHex == null)
+    public HashSet<Hex> GetHexesInRadiusWithJump(MoveComponent MoveComponent)
     {
-        Debug.LogError("CenterHex is null!");
-        return new HashSet<Hex>();
-    }
+        var AllHexes = Pool.GetAllOfType<Hex>();
 
-    Vector3Int CenterPos = CenterHex.Position;
-    int CenterHeight = CenterHex.Position.y; // Эталонная высота
+        foreach (Hex Hex in AllHexes) Hex.SetPickState(false);
 
-    HashSet<Hex> Result = new HashSet<Hex>();
-
-    // Сохраняем все гексы в словаре для быстрого доступа
-    var HexDictionary = AllHexes.GroupBy(h => new Vector2Int(h.Position.x, h.Position.z))
-        .ToDictionary(g => g.Key, g => g.First());
-
-    // Радиальная система
-    for (int radius = 1; radius <= MoveComponent.JumpLength; radius++)
-    {
-        // Получаем гексы на текущем уровне радиуса
-        List<Vector3Int> Ring = GetHexRing(CenterPos, radius);
-
-        foreach (var TargetPos in Ring)
+        Hex CenterHex = AllHexes.FirstOrDefault(h => h.Position == MoveComponent.Position);
+        if (CenterHex == null)
         {
-            if (!HexDictionary.TryGetValue(new Vector2Int(TargetPos.x, TargetPos.z), out Hex TargetHex)) continue;
+            Debug.LogError("CenterHex is null!");
+            return new HashSet<Hex>();
+        }
 
-            if (!TargetHex.IsWalkable) continue;
+        Vector3Int CenterPos = CenterHex.Position;
+        int CenterHeight = CenterHex.Position.y;
 
-            int TotalCost = 0;
+        HashSet<Hex> Result = new HashSet<Hex>();
 
-            // Построение пути к целевому гексу
-            List<Vector3Int> Path = GetPathBetweenHexes(CenterPos, TargetPos);
+        var HexDictionary = AllHexes.GroupBy(h => new Vector2Int(h.Position.x, h.Position.z))
+            .ToDictionary(g => g.Key, g => g.First());
 
-            bool IsPathBlocked = false;
+        for (int radius = 1; radius <= MoveComponent.JumpLength; radius++)
+        {
+            List<Vector3Int> Ring = GetHexRing(CenterPos, radius);
 
-            foreach (var StepPos in Path)
+            foreach (var TargetPos in Ring)
             {
-                Vector2Int Key = new Vector2Int(StepPos.x, StepPos.z);
+                if (!HexDictionary.TryGetValue(new Vector2Int(TargetPos.x, TargetPos.z), out Hex TargetHex)) continue;
 
-                if (!HexDictionary.TryGetValue(Key, out Hex CurrentHex))
+                if (!TargetHex.IsWalkable) continue;
+
+                int TotalCost = 0;
+
+                List<Vector3Int> Path = GetPathBetweenHexes(CenterPos, TargetPos);
+
+                bool IsPathBlocked = false;
+
+                foreach (var StepPos in Path)
                 {
-                    // Если клетка отсутствует (разрыв), добавляем минимальную стоимость (как ровная поверхность)
-                    TotalCost += GetFlatOrDownCost(); // Разрыв как ровная поверхность
-                    continue;
+                    Vector2Int Key = new Vector2Int(StepPos.x, StepPos.z);
+
+                    if (!HexDictionary.TryGetValue(Key, out Hex CurrentHex))
+                    {
+                        TotalCost += GetFlatOrDownCost();
+                        continue;
+                    }
+
+                    int CurrentHeight = CurrentHex.Position.y;
+
+                    if (CurrentHeight > CenterHeight)
+                    {
+                        int HeightDifference = CurrentHeight - CenterHeight;
+                        TotalCost += HeightDifference;
+                    }
+                    else
+                    {
+                        TotalCost += GetFlatOrDownCost();
+                    }
+
+                    if (TotalCost > MoveComponent.JumpLength)
+                    {
+                        IsPathBlocked = true;
+                        break;
+                    }
                 }
 
-                int CurrentHeight = CurrentHex.Position.y;
+                if (IsPathBlocked) continue;
 
-                if (CurrentHeight > CenterHeight)
-                {
-                    // Если текущий гекс выше эталонной высоты, добавляем разницу высот
-                    int HeightDifference = CurrentHeight - CenterHeight;
-                    TotalCost += HeightDifference;
-                }
-                else
-                {
-                    // Если текущий гекс ниже или на уровне эталонной высоты, считаем его как ровный
-                    TotalCost += GetFlatOrDownCost();
-                }
-
-                // Если общая стоимость уже превысила JumpLength, блокируем путь
-                if (TotalCost > MoveComponent.JumpLength)
-                {
-                    IsPathBlocked = true;
-                    break;
-                }
+                Result.Add(TargetHex);
             }
-
-            // Если путь заблокирован, игнорируем этот гекс
-            if (IsPathBlocked) continue;
-
-            // Если путь доступен, добавляем гекс в результат
-            Result.Add(TargetHex);
         }
+
+        foreach (Hex Hex in Result) Hex.SetPickState(true);
+
+        return Result;
     }
 
-    // Устанавливаем состояние подсветки для всех гексов
-    foreach (Hex Hex in Result) Hex.SetPickState(true);
-
-    return Result;
-}
-
-private List<Vector3Int> GetHexRing(Vector3Int Center, int Radius)
-{
-    List<Vector3Int> Ring = new List<Vector3Int>();
-
-    // Берём стартовую позицию (одна из шести направлений на нужном радиусе)
-    Vector3Int Current = Center + HexLibrary.GetHexDirections()[4] * Radius;
-
-    // Проходим по шести направлениям, чтобы обойти весь радиус
-    foreach (var Direction in HexLibrary.GetHexDirections())
+    private List<Vector3Int> GetHexRing(Vector3Int Center, int Radius)
     {
-        for (int i = 0; i < Radius; i++)
+        List<Vector3Int> Ring = new List<Vector3Int>();
+
+        Vector3Int Current = Center + HexLibrary.GetHexDirections()[4] * Radius;
+
+        foreach (var Direction in HexLibrary.GetHexDirections())
         {
-            Ring.Add(Current);
-            Current += Direction;
+            for (int i = 0; i < Radius; i++)
+            {
+                Ring.Add(Current);
+                Current += Direction;
+            }
         }
+
+        return Ring;
     }
 
-    return Ring;
-}
-
-private List<Vector3Int> GetPathBetweenHexes(Vector3Int Start, Vector3Int End)
-{
-    // Алгоритм построения прямого пути между двумя гексами (например, Bresenham для гексагонов)
-    List<Vector3Int> Path = new List<Vector3Int>();
-
-    int N = Mathf.Max(Mathf.Abs(Start.x - End.x), Mathf.Abs(Start.y - End.y), Mathf.Abs(Start.z - End.z));
-    for (int i = 1; i <= N; i++)
+    private List<Vector3Int> GetPathBetweenHexes(Vector3Int Start, Vector3Int End)
     {
-        float t = i / (float)N;
-        int x = Mathf.RoundToInt(Mathf.Lerp(Start.x, End.x, t));
-        int y = Mathf.RoundToInt(Mathf.Lerp(Start.y, End.y, t));
-        int z = Mathf.RoundToInt(Mathf.Lerp(Start.z, End.z, t));
-        Path.Add(new Vector3Int(x, y, z));
+        List<Vector3Int> Path = new List<Vector3Int>();
+
+        int N = Mathf.Max(Mathf.Abs(Start.x - End.x), Mathf.Abs(Start.y - End.y), Mathf.Abs(Start.z - End.z));
+        for (int i = 1; i <= N; i++)
+        {
+            float t = i / (float)N;
+            int x = Mathf.RoundToInt(Mathf.Lerp(Start.x, End.x, t));
+            int y = Mathf.RoundToInt(Mathf.Lerp(Start.y, End.y, t));
+            int z = Mathf.RoundToInt(Mathf.Lerp(Start.z, End.z, t));
+            Path.Add(new Vector3Int(x, y, z));
+        }
+
+        return Path;
     }
 
-    return Path;
-}
-
-private int GetFlatOrDownCost() => 1; // Перемещение по ровной поверхности или вниз
-
-private int GetJumpOverCost() => 1; // Стоимость прыжка через разрыв
+    private int GetFlatOrDownCost() => 1;
 }

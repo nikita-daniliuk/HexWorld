@@ -11,84 +11,84 @@ public class HexCreator : BaseSignal
 
     private bool FindHexParent()
     {
-        var poolParent = GameObject.FindGameObjectWithTag("Pool");
-        if (poolParent == null) return false;
-        HexParent = poolParent.transform.Find("Hex")?.transform;
+        var PoolParent = GameObject.FindGameObjectWithTag("Pool");
+        if (PoolParent == null) return false;
+        HexParent = PoolParent.transform.Find("Hex")?.transform;
         return HexParent != null;
     }
 
-    private void ConnectNeighborHexes(Hex hex)
+    private void ConnectNeighborHexes(Hex Hex)
     {
-        HashSet<Hex> neighbors = new HashSet<Hex>();
-        foreach (Vector3Int direction in HexLibrary.GetHexDirections())
+        HashSet<Hex> Neighbors = new HashSet<Hex>();
+        foreach (Vector3Int Direction in HexLibrary.GetHexDirections())
         {
-            Vector3Int neighborCoords = hex.Position + direction;
-            var nearHexes = AllHexes
-                .FindAll(x => x.Position.x == neighborCoords.x && x.Position.z == neighborCoords.z);
+            Vector3Int NeighborCoords = Hex.Position + Direction;
+            var NearHexes = AllHexes
+                .FindAll(X => X.Position.x == NeighborCoords.x && X.Position.z == NeighborCoords.z);
 
-            if (nearHexes != null)
-                neighbors.UnionWith(nearHexes);
+            if (NearHexes != null)
+                Neighbors.UnionWith(NearHexes);
         }
 
-        hex.SetNeighborHexes(neighbors);
+        Hex.SetNeighborHexes(Neighbors);
 
-        foreach (Hex neighbor in hex.ConnectedHexes)
+        foreach (Hex Neighbor in Hex.ConnectedHexes)
         {
-            HashSet<Hex> neighborConnections = new HashSet<Hex>(neighbor.ConnectedHexes) { hex };
-            neighbor.SetNeighborHexes(neighborConnections);
+            HashSet<Hex> NeighborConnections = new HashSet<Hex>(Neighbor.ConnectedHexes) { Hex };
+            Neighbor.SetNeighborHexes(NeighborConnections);
         }
     }
 
     public GameObject CreateHexNeighbor(
-        Hex hitHex,
-        RaycastHit hit,
-        GameObject hexPrefab,
+        Hex HitHex,
+        RaycastHit Hit,
+        GameObject HexPrefab,
         List<HexPaintOption> HexPaintOptions,
-        int targetHeight,
-        int targetLength,
-        int gridWidth,
-        int gridHeight
+        int TargetHeight,
+        int TargetLength,
+        int GridWidth,
+        int GridHeight
     )
     {
         if (!FindHexParent()) return null;
 
-        float angle = Vector3.Angle(hit.normal, Vector3.up);
-        bool clickedOnTop = angle < 30f;
+        float Angle = Vector3.Angle(Hit.normal, Vector3.up);
+        bool ClickedOnTop = Angle < 30f;
 
-        Vector3Int newCoords;
+        Vector3Int NewCoords;
 
-        if (clickedOnTop)
+        if (ClickedOnTop)
         {
-            int newTop = targetHeight;
+            int NewTop = TargetHeight;
 
-            newCoords = new Vector3Int(hitHex.Position.x, newTop, hitHex.Position.z);
+            NewCoords = new Vector3Int(HitHex.Position.x, NewTop, HitHex.Position.z);
 
-            if (!IsValidHexPosition(newCoords, newTop, targetLength))
+            if (!IsValidHexPosition(NewCoords, NewTop, TargetLength))
                 return null;
 
-            targetHeight = newTop;
+            TargetHeight = NewTop;
         }
         else
         {
-            Vector3Int closestDirection = HexLibrary.GetHexDirections()
-                .OrderBy(d =>
+            Vector3Int ClosestDirection = HexLibrary.GetHexDirections()
+                .OrderBy(D =>
                     Vector3.Distance(
-                        hit.point,
-                        HexToPosition(hitHex.Position + d, gridWidth, gridHeight)
+                        Hit.point,
+                        HexToPosition(HitHex.Position + D, GridWidth, GridHeight)
                     )
                 )
                 .First();
 
-            newCoords = hitHex.Position + closestDirection;
+            NewCoords = HitHex.Position + ClosestDirection;
 
-            if (!IsValidHexPosition(newCoords, targetHeight, targetLength))
+            if (!IsValidHexPosition(NewCoords, TargetHeight, TargetLength))
                 return null;
         }
 
-        Vector3 spawnPosition = HexToPosition(newCoords, gridWidth, gridHeight);
+        Vector3 SpawnPosition = HexToPosition(NewCoords, GridWidth, GridHeight);
 
-        GameObject newHex = Instantiate(hexPrefab, HexParent.transform);
-        newHex.transform.position = spawnPosition;
+        GameObject NewHex = Instantiate(HexPrefab, HexParent.transform);
+        NewHex.transform.position = SpawnPosition;
 
         MeshRenderer SelectedHex = null;
         foreach (var Option in HexPaintOptions)
@@ -100,119 +100,119 @@ public class HexCreator : BaseSignal
             }
         }
 
-        Hex newHexComponent = newHex.GetComponent<Hex>();
-        newHexComponent.Initialization(new HashSet<object> { newCoords });
-        newHexComponent.SetHeight(targetHeight);
-        newHexComponent.SetLength(targetLength);
-        newHexComponent.SetHexVisual(SelectedHex);
-        hitHex.SetIsWalkable(!(hitHex.Position.y == newHexComponent.Position.y - newHexComponent.Lenght));
-        newHexComponent.UpdateEmblemPosition();
+        Hex NewHexComponent = NewHex.GetComponent<Hex>();
+        NewHexComponent.Initialization(new HashSet<object> { NewCoords });
+        NewHexComponent.SetHeight(TargetHeight);
+        NewHexComponent.SetLength(TargetLength);
+        NewHexComponent.SetHexVisual(SelectedHex);
+        HitHex.SetIsWalkable(!(HitHex.Position.y == NewHexComponent.Position.y - NewHexComponent.Lenght));
+        NewHexComponent.UpdateEmblemPosition();
 
         AllHexes = HexParent.GetComponentsInChildren<Hex>().ToList();
-        AllHexes.Add(newHexComponent);
+        AllHexes.Add(NewHexComponent);
 
-        ConnectNeighborHexes(newHexComponent);
+        ConnectNeighborHexes(NewHexComponent);
 
-        return newHex;
+        return NewHex;
     }
 
-    private bool IsValidHexPosition(Vector3Int coords, int targetHeight, int targetLength)
+    private bool IsValidHexPosition(Vector3Int Coords, int TargetHeight, int TargetLength)
     {
-        int newStart = targetHeight - targetLength + 1;
-        int newEnd   = targetHeight;
+        int NewStart = TargetHeight - TargetLength + 1;
+        int NewEnd = TargetHeight;
 
-        if(AllHexes.Count == 0) AllHexes = HexParent.GetComponentsInChildren<Hex>().ToList();
+        if (AllHexes.Count == 0) AllHexes = HexParent.GetComponentsInChildren<Hex>().ToList();
 
-        var sameXZHexes = AllHexes
-            .Where(h => h.Position.x == coords.x && h.Position.z == coords.z)
-            .OrderBy(h => h.Position.y)
+        var SameXZHexes = AllHexes
+            .Where(H => H.Position.x == Coords.x && H.Position.z == Coords.z)
+            .OrderBy(H => H.Position.y)
             .ToList();
 
-        if (sameXZHexes.Count == 0) return true;
+        if (SameXZHexes.Count == 0) return true;
 
-        var occupiedRanges = new List<(int Start, int End)>();
-        foreach (var neighbor in sameXZHexes)
+        var OccupiedRanges = new List<(int Start, int End)>();
+        foreach (var Neighbor in SameXZHexes)
         {
-            int start = neighbor.Position.y - neighbor.Lenght + 1;
-            int end   = neighbor.Position.y;
-            occupiedRanges.Add((start, end));
+            int Start = Neighbor.Position.y - Neighbor.Lenght + 1;
+            int End = Neighbor.Position.y;
+            OccupiedRanges.Add((Start, End));
         }
 
-        occupiedRanges = occupiedRanges.OrderBy(r => r.Start).ToList();
-        var mergedRanges = new List<(int Start, int End)>();
+        OccupiedRanges = OccupiedRanges.OrderBy(R => R.Start).ToList();
+        var MergedRanges = new List<(int Start, int End)>();
 
-        foreach (var range in occupiedRanges)
+        foreach (var Range in OccupiedRanges)
         {
-            if (mergedRanges.Count == 0)
+            if (MergedRanges.Count == 0)
             {
-                mergedRanges.Add(range);
+                MergedRanges.Add(Range);
             }
             else
             {
-                var last = mergedRanges[mergedRanges.Count - 1];
-                if (range.Start <= last.End + 1)
+                var Last = MergedRanges[MergedRanges.Count - 1];
+                if (Range.Start <= Last.End + 1)
                 {
-                    int mergedEnd = Mathf.Max(last.End, range.End);
-                    mergedRanges[mergedRanges.Count - 1] = (last.Start, mergedEnd);
+                    int MergedEnd = Mathf.Max(Last.End, Range.End);
+                    MergedRanges[MergedRanges.Count - 1] = (Last.Start, MergedEnd);
                 }
                 else
                 {
-                    mergedRanges.Add(range);
+                    MergedRanges.Add(Range);
                 }
             }
         }
 
-        var freeRanges = new List<(int Start, int End)>();
-        int pointer = int.MinValue;
+        var FreeRanges = new List<(int Start, int End)>();
+        int Pointer = int.MinValue;
 
-        foreach (var (start, end) in mergedRanges)
+        foreach (var (Start, End) in MergedRanges)
         {
-            if (start > pointer)
+            if (Start > Pointer)
             {
-                freeRanges.Add((pointer, start - 1));
+                FreeRanges.Add((Pointer, Start - 1));
             }
-            pointer = Mathf.Max(pointer, end + 1);
+            Pointer = Mathf.Max(Pointer, End + 1);
         }
 
-        freeRanges.Add((pointer, int.MaxValue));
+        FreeRanges.Add((Pointer, int.MaxValue));
 
-        foreach (var (freeStart, freeEnd) in freeRanges)
+        foreach (var (FreeStart, FreeEnd) in FreeRanges)
         {
-            if (newStart >= freeStart && newEnd <= freeEnd)
+            if (NewStart >= FreeStart && NewEnd <= FreeEnd)
                 return true;
         }
         return false;
     }
 
-    public void RemoveHex(Hex hex)
+    public void RemoveHex(Hex Hex)
     {
-        foreach (Hex neighbor in hex.ConnectedHexes)
+        foreach (Hex Neighbor in Hex.ConnectedHexes)
         {
-            var updatedConnections = new HashSet<Hex>(neighbor.ConnectedHexes);
-            updatedConnections.Remove(hex);
-            neighbor.SetNeighborHexes(updatedConnections);
+            var UpdatedConnections = new HashSet<Hex>(Neighbor.ConnectedHexes);
+            UpdatedConnections.Remove(Hex);
+            Neighbor.SetNeighborHexes(UpdatedConnections);
         }
-        AllHexes.Remove(hex);
-        DestroyImmediate(hex.gameObject);
+        AllHexes.Remove(Hex);
+        DestroyImmediate(Hex.gameObject);
     }
 
-    private Vector3 HexToPosition(Vector3Int coords, int gridWidth, int gridHeight)
+    private Vector3 HexToPosition(Vector3Int Coords, int GridWidth, int GridHeight)
     {
-        float x = Mathf.Sqrt(3) * coords.x + (Mathf.Sqrt(3) / 2f) * coords.z;
-        float z = 1.5f * coords.z;
+        float X = Mathf.Sqrt(3) * Coords.x + (Mathf.Sqrt(3) / 2f) * Coords.z;
+        float Z = 1.5f * Coords.z;
 
-        Vector3 offset = CalculateGridCenterOffset(gridWidth, gridHeight);
-        return new Vector3(x, 0, z) - offset;
+        Vector3 Offset = CalculateGridCenterOffset(GridWidth, GridHeight);
+        return new Vector3(X, 0, Z) - Offset;
     }
 
-    private Vector3 CalculateGridCenterOffset(int gridWidth, int gridHeight)
+    private Vector3 CalculateGridCenterOffset(int GridWidth, int GridHeight)
     {
-        float width  = Mathf.Sqrt(3) * gridWidth;
-        float height = 1.5f * gridHeight;
+        float Width = Mathf.Sqrt(3) * GridWidth;
+        float Height = 1.5f * GridHeight;
         return new Vector3(
-            width  / 2f - (Mathf.Sqrt(3) / 2f),
+            Width / 2f - (Mathf.Sqrt(3) / 2f),
             0,
-            height / 2f - 0.75f
+            Height / 2f - 0.75f
         );
     }
 }

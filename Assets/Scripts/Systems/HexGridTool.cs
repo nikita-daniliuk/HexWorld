@@ -7,6 +7,7 @@ using UnityEngine;
 [RequireComponent(typeof(HexPainter))]
 [RequireComponent(typeof(HexCreator))]
 [RequireComponent(typeof(HexWalkable))]
+[RequireComponent(typeof(HexMeshCombiner))]
 public class HexGridTool : BaseSignal
 {
     public Hex HexPrefab;

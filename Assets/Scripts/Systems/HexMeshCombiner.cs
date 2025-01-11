@@ -71,6 +71,8 @@ public class HexMeshCombiner : BaseSignal
 
         CombinedMeshRenderer.material = OriginalHexFilters[0].GetComponent<MeshRenderer>().material;
 
+        CombinedMeshObject.isStatic = true;
+
         EmitSignal(new Message(gameObject, $"Combined meshes: {OriginalHexFilters.Count}"));
     }
 }

@@ -1,7 +1,7 @@
 using UnityEngine;
 using Zenject;
 
-public class MainCamera : MonoBehaviour
+public class MainCamera : BaseSignal
 {
     [Inject] EventBus EventBus;
 
@@ -37,15 +37,15 @@ public class MainCamera : MonoBehaviour
 
     void Awake()
     {
-        EventBus.Subscribe(SignalBox);
-
         Cam = GetComponent<Camera>();
         TargetPosition = transform.position;
         TargetRotationY = transform.eulerAngles.y;
         CurrentDistance = (MaxDistance + MinDistance) / 2f;
+
+        EventBus.Subscribe<PickUnitSignal>(SignalBox);
     }
 
-    void SignalBox(object Obj)
+    void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {
@@ -156,8 +156,5 @@ public class MainCamera : MonoBehaviour
         transform.rotation = Quaternion.Euler(60f, TargetRotationY, 0f);
     }
     
-    void OnDestroy()
-    {
-        EventBus.Unsubscribe(SignalBox);
-    }
+    void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);
 }

@@ -16,7 +16,7 @@ public abstract class Unit : BaseSignal
         EmitSignal(new Message(EnumUnitSignals.Initialization, gameObject, gameObject.name));
     }
 
-    protected virtual void ChangeState(EnumUnitState State)
+    public virtual void ChangeState(EnumUnitState State)
     {
         _State = State;
         EmitSignal(EnumUnitSignals.StateUpdated);
@@ -66,7 +66,7 @@ public abstract class Unit : BaseSignal
     protected virtual void ExtractSystems(HashSet<object> Systems){}
     protected virtual void ExtractComponents(HashSet<Components> Components){}
 
-    protected virtual void SignalBox(object Obj){}
+    protected virtual void SignalBox<T>(T Obj){}
 
     void OnDestroy() => UnsubscribeOnComponentsSignals();
 }

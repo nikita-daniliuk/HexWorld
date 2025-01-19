@@ -8,7 +8,6 @@ public class PlayerSpawner : MonoBehaviour
     [Inject] EventBus EventBus;
     [Inject] Factory Factory;
     [Inject] WorldUpdateSystem WorldUpdateSystem;
-    [Inject] StepByStepSystem StepByStepSystem;
     [Inject] Pool Pool;
 
     [SerializeField] Unit PlayerPrefab;
@@ -17,23 +16,25 @@ public class PlayerSpawner : MonoBehaviour
 
     void Spawn()
     {
-        Hex RandomHex = Pool.GetAllOfType<Hex>()
-            .Where(x => x.IsWalkable)
-            .OrderBy(x => UnityEngine.Random.value)
-            .FirstOrDefault();
+        for (int i = 0; i < 2; i++)
+        {
+            Hex RandomHex = Pool.GetAllOfType<Hex>()
+                .Where(x => x.IsWalkable)
+                .OrderBy(x => UnityEngine.Random.value)
+                .FirstOrDefault();
 
-        if(!RandomHex) return;
+            if(!RandomHex) return;
 
-        var Player = Factory.Create<Unit>(PlayerPrefab.gameObject, RandomHex.transform.position);
+            var Unit = Factory.Create<Unit>(PlayerPrefab.gameObject, RandomHex.transform.position);
 
-        Player.Initialization(new HashSet<object>{
-            EventBus,
-            WorldUpdateSystem,
-            StepByStepSystem
-        }); 
+            Unit.Initialization(new HashSet<object>{
+                EventBus,
+                WorldUpdateSystem
+            }); 
 
-        Player.GetComponentByType<MoveComponent>().Position = RandomHex.Position;
+            Unit.GetComponentByType<MoveComponent>().Position = RandomHex.Position;
 
-        EventBus.Invoke(Player);
+            RandomHex.SetIsWalkable(false);            
+        }
     }
 }

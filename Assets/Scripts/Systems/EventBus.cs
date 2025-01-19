@@ -1,20 +1,95 @@
+using System;
+using System.Collections.Generic;
+
 public class EventBus : ISystems
 {
-    public delegate void Action(object obj);
-    private event Action Event;
+    private readonly Dictionary<object, List<Delegate>> EventHandlers = new Dictionary<object, List<Delegate>>();
+    private const string GlobalKey = "GlobalKey";
 
-    public void Invoke(object obj)
+    public void Subscribe<T>(Action<T> Listener)
     {
-        Event?.Invoke(obj);
+        if (Listener == null) return;
+
+        var key = typeof(T);
+        if (!EventHandlers.ContainsKey(key))
+        {
+            EventHandlers[key] = new List<Delegate>();
+        }
+
+        if (!EventHandlers[key].Contains(Listener))
+        {
+            EventHandlers[key].Add(Listener);
+        }
     }
 
-    public void Subscribe(Action listener)
+    public void SubscribeToAll<T>(Action<T> Listener)
     {
-        Event += listener;
+        if (Listener == null) return;
+
+        if (!EventHandlers.ContainsKey(GlobalKey))
+        {
+            EventHandlers[GlobalKey] = new List<Delegate>();
+        }
+
+        if (!EventHandlers[GlobalKey].Contains(Listener))
+        {
+            EventHandlers[GlobalKey].Add(Listener);
+        }
     }
 
-    public void Unsubscribe(Action listener)
+    public void Unsubscribe<T>(Action<T> Listener)
     {
-        Event -= listener;
+        if (Listener == null) return;
+
+        var key = typeof(T);
+        if (EventHandlers.ContainsKey(key))
+        {
+            EventHandlers[key].RemoveAll(d => d == null || d.Equals(Listener));
+            if (EventHandlers[key].Count == 0)
+            {
+                EventHandlers.Remove(key);
+            }
+        }
+    }
+
+    public void UnsubscribeFromAll<T>(Action<T> Listener)
+    {
+        if (Listener == null) return;
+
+        foreach (var key in EventHandlers.Keys)
+        {
+            EventHandlers[key].RemoveAll(d => d == null || d.Equals(Listener));
+        }
+    }
+
+    public void Invoke<T>(T payload)
+    {
+        var key = typeof(T);
+
+        if (EventHandlers.ContainsKey(key))
+        {
+            EventHandlers[key].RemoveAll(d => d == null || d.Target as UnityEngine.Object == null);
+
+            foreach (var Listener in EventHandlers[key])
+            {
+                if (Listener is Action<T> TypedListener)
+                {
+                    TypedListener.Invoke(payload);
+                }
+            }
+        }
+
+        if (EventHandlers.ContainsKey(GlobalKey))
+        {
+            EventHandlers[GlobalKey].RemoveAll(d => d == null || d.Target as UnityEngine.Object == null);
+
+            foreach (var Listener in EventHandlers[GlobalKey])
+            {
+                if (Listener is Action<T> TypedListener)
+                {
+                    TypedListener.Invoke(payload);
+                }
+            }
+        }
     }
 }

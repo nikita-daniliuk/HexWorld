@@ -9,11 +9,11 @@ public class SceneLoader : ISystems
     public SceneLoader(EventBus EventBus)
     {
         this.EventBus = EventBus;
-        this.EventBus.Subscribe(SignalBox);
+        this.EventBus.Subscribe<EnumSignals>(SignalBox);
         LoadGame();
     }
     
-    protected void SignalBox(object Obj)
+    protected void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {

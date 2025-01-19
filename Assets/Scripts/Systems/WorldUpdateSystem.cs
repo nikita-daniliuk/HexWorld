@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System;
+using Zenject;
 
-public sealed class WorldUpdateSystem
+public sealed class WorldUpdateSystem : IFixedTickable
 {
     private readonly HashSet<IFixedUpdate> FixedUpdatesObj = new HashSet<IFixedUpdate>();
     private readonly List<IFixedUpdate> ToRemoveFixed = new List<IFixedUpdate>();

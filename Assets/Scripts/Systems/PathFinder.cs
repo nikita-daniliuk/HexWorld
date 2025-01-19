@@ -8,43 +8,53 @@ public class PathFinder : MonoBehaviour
     [Inject] Pool Pool;
     [Inject] EventBus EventBus;
 
-    Unit TargetUnit;
+    MoveComponent MoveComponent;
 
-    void Start() => EventBus.Subscribe(SignalBox);
+    void Start()
+    {
+        EventBus.Subscribe<PickHexSignal>(SignalBox);
+        EventBus.Subscribe<UnitWalkSignal>(SignalBox);
+        EventBus.Subscribe<UnitJumpSignal>(SignalBox);
+        EventBus.Subscribe<PickUnitSignal>(SignalBox);
+    }
 
-    void SignalBox(object Obj)
+    void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {
+            case PickUnitSignal PickUnitSignal :
+                MoveComponent = PickUnitSignal.Unit.GetComponentByType<MoveComponent>();
+                HideAllPickedHexes();
+                break;
+
             case PickHexSignal PickHexSignal:
 
-                if (TargetUnit == null) return;
+                if (MoveComponent == null) return;
 
-                switch (TargetUnit.State)
+                switch (MoveComponent.Master.State)
                 {
                     case EnumUnitState.Stay :
-                        EventBus.Invoke(new PathSignal(GenerateNearestWay(PickHexSignal.Hex.Position)));
+                        MoveComponent?.SetNewPath(GenerateNearestWay(PickHexSignal.Hex.Position));
                         break;
                     case EnumUnitState.Jump :
-                        EventBus.Invoke(new PathSignal(new HashSet<Hex> {PickHexSignal.Hex}));
+                        MoveComponent?.SetNewPath(new HashSet<Hex> {PickHexSignal.Hex, Pool.GetAllOfType<Hex>().FirstOrDefault(x => x.Position == MoveComponent.Position)});
                         HideAllPickedHexes();
                         break;
                     default: break;
                 }
                 break;
 
-            case UnitWalkSignal UnitWalkSignal:
-                TargetUnit = UnitWalkSignal.Unit;
-                if (TargetUnit.State != EnumUnitState.Stay) return;
-                GetHexesInRange(TargetUnit.GetComponentByType<MoveComponent>().CurrentTurnCount);
+            case UnitWalkSignal UnitWalkSignal :
+                if (UnitWalkSignal.Unit.State != EnumUnitState.Stay) return;
+                GetHexesInRange(MoveComponent.CurrentTurnCount);
                 break;
 
-            case JumpSignal JumpSignal:
-                GetHexesInRadiusWithJump(JumpSignal.MoveComponent);
-                break;
-
-            case PickUnitSignal PickUnitSignal :
-                TargetUnit = PickUnitSignal.Unit;
+            case UnitJumpSignal JumpSignal :
+                if (JumpSignal.Unit.State != EnumUnitState.Stay) return;
+                if(GetHexesInRadiusWithJump(MoveComponent).Count != 0)
+                {
+                    MoveComponent.ReadyToJump();
+                }
                 break;
                 
             default: break;
@@ -66,10 +76,8 @@ public class PathFinder : MonoBehaviour
 
         foreach (Hex Hex in Hexes) Hex.SetPickState(false);
 
-        Vector3Int UnitPosition = TargetUnit.GetComponentByType<MoveComponent>().Position;
+        Vector3Int UnitPosition = MoveComponent.Position;
         HashSet<Hex> Path = FindShortestPath(UnitPosition, FinalPoint, Hexes);
-
-        Path.RemoveWhere(X => X.Position == UnitPosition);
 
         foreach (Hex Hex in Path) Hex.SetPickState(true);
 
@@ -130,7 +138,7 @@ public class PathFinder : MonoBehaviour
         foreach (Hex Hex in AllHexes) Hex.SetPickState(false);
 
         HashSet<Hex> Result = new HashSet<Hex>();
-        Hex CenterHex = AllHexes.FirstOrDefault(x => x.Position == TargetUnit.GetComponentByType<MoveComponent>().Position);
+        Hex CenterHex = AllHexes.FirstOrDefault(x => x.Position == MoveComponent.Position);
         if (CenterHex == null) return Result;
 
         Queue<(Hex Hex, int Dist, int MinHeight, int MaxHeight)> Queue = new Queue<(Hex, int, int, int)>();
@@ -171,72 +179,84 @@ public class PathFinder : MonoBehaviour
     {
         var AllHexes = Pool.GetAllOfType<Hex>();
 
-        foreach (Hex Hex in AllHexes) Hex.SetPickState(false);
+        HideAllPickedHexes();
 
-        Hex CenterHex = AllHexes.FirstOrDefault(h => h.Position == MoveComponent.Position);
-        if (CenterHex == null)
-        {
-            Debug.LogError("CenterHex is null!");
-            return new HashSet<Hex>();
-        }
+        Vector3 CenterWorldPos = MoveComponent.transform.position;
+        Vector3Int CenterPos = MoveComponent.Position;
+        int CenterHeight = CenterPos.y;
 
-        Vector3Int CenterPos = CenterHex.Position;
-        int CenterHeight = CenterHex.Position.y;
-
+        HashSet<Hex> AllReachableHexes = new HashSet<Hex>();
         HashSet<Hex> Result = new HashSet<Hex>();
 
-        var HexDictionary = AllHexes.GroupBy(h => new Vector2Int(h.Position.x, h.Position.z))
-            .ToDictionary(g => g.Key, g => g.First());
+        var HexDictionary = AllHexes.GroupBy(H => new Vector3Int(H.Position.x, H.Position.y, H.Position.z))
+            .ToDictionary(G => G.Key, G => G.First());
 
-        for (int radius = 1; radius <= MoveComponent.JumpLength; radius++)
+        Hex StartingHex = AllHexes.FirstOrDefault(H => H.Position == MoveComponent.Position);
+
+        if (StartingHex == null)
         {
-            List<Vector3Int> Ring = GetHexRing(CenterPos, radius);
+            Debug.LogError("Starting hex not found for the MoveComponent's position.");
+            return Result;
+        }
+
+        for (int Radius = 1; Radius <= MoveComponent.JumpLength; Radius++)
+        {
+            List<Vector3Int> Ring = GetHexRing(CenterPos, Radius);
 
             foreach (var TargetPos in Ring)
             {
-                if (!HexDictionary.TryGetValue(new Vector2Int(TargetPos.x, TargetPos.z), out Hex TargetHex)) continue;
-
-                if (!TargetHex.IsWalkable) continue;
-
-                int TotalCost = 0;
-
-                List<Vector3Int> Path = GetPathBetweenHexes(CenterPos, TargetPos);
-
-                bool IsPathBlocked = false;
-
-                foreach (var StepPos in Path)
+                foreach (var Hex in AllHexes.Where(H => H.Position.x == TargetPos.x && H.Position.z == TargetPos.z))
                 {
-                    Vector2Int Key = new Vector2Int(StepPos.x, StepPos.z);
+                    AllReachableHexes.Add(Hex);
+                }
+            }
+        }
 
-                    if (!HexDictionary.TryGetValue(Key, out Hex CurrentHex))
-                    {
-                        TotalCost += GetFlatOrDownCost();
-                        continue;
-                    }
+        AllReachableHexes.RemoveWhere(Hex => !Hex.IsWalkable);
 
-                    int CurrentHeight = CurrentHex.Position.y;
 
-                    if (CurrentHeight > CenterHeight)
-                    {
-                        int HeightDifference = CurrentHeight - CenterHeight;
-                        TotalCost += HeightDifference;
-                    }
-                    else
-                    {
-                        TotalCost += GetFlatOrDownCost();
-                    }
+        HashSet<Hex> HexesAfterJumpCheck = new HashSet<Hex>();
+        foreach (Hex Hex in AllReachableHexes)
+        {
+            if (MoveComponent.CanJumpToTarget(Hex.Enter.transform.position))
+            {
+                HexesAfterJumpCheck.Add(Hex);
+            }
+        }
 
-                    if (TotalCost > MoveComponent.JumpLength)
-                    {
-                        IsPathBlocked = true;
-                        break;
-                    }
+        foreach (Hex TargetHex in HexesAfterJumpCheck)
+        {
+            int TotalCost = 0;
+            bool IsPathBlocked = false;
+
+            List<Vector3Int> Path = GetPathBetweenHexes(CenterPos, TargetHex.Position);
+
+            foreach (var StepPos in Path)
+            {
+                Vector3Int StepKey = new Vector3Int(StepPos.x, StepPos.y, StepPos.z);
+
+                if (!HexDictionary.TryGetValue(StepKey, out Hex CurrentHex))
+                {
+                    TotalCost += GetFlatOrDownCost();
+                    continue;
                 }
 
-                if (IsPathBlocked) continue;
+                int CurrentHeight = CurrentHex.Position.y;
+                if (CurrentHeight > CenterHeight)
+                {
+                    int HeightDifference = CurrentHeight - CenterHeight;
+                    TotalCost += HeightDifference * 1;
+                }
+                else continue;
 
-                Result.Add(TargetHex);
+                if (TotalCost > MoveComponent.JumpLength)
+                {
+                    IsPathBlocked = true;
+                    break;
+                }
             }
+
+            if (!IsPathBlocked) Result.Add(TargetHex);
         }
 
         foreach (Hex Hex in Result) Hex.SetPickState(true);
@@ -280,4 +300,6 @@ public class PathFinder : MonoBehaviour
     }
 
     private int GetFlatOrDownCost() => 1;
+
+    void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);
 }

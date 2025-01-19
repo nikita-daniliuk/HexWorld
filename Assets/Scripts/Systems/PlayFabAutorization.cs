@@ -12,31 +12,30 @@ public class PlayFabAutorization : MonoBehaviour
     [Inject] EventBus EventBus;
     [Inject] GameData GameData;
     [Inject] PlayFabManager PlayFabManager;
-    [SerializeField] GameObject Canvas;
 
-    void Start()
-    {
-        #if !UNITY_EDITOR
-        Process currentProcess = Process.GetCurrentProcess();
-        Process[] processes = Process.GetProcessesByName(currentProcess.ProcessName);
+    // void Start()
+    // {
+    //     #if !UNITY_EDITOR
+    //     Process currentProcess = Process.GetCurrentProcess();
+    //     Process[] processes = Process.GetProcessesByName(currentProcess.ProcessName);
 
-        if (processes.Length > 1)
-        {
-            UnityEngine.Debug.LogError("Another instance of the game is already running.");
-            Canvas.SetActive(true);
-            return;
-        }
-        #endif
-        PlayFabManager.Login();
-        EventBus.Subscribe(SignalBox);
-    }
+    //     if (processes.Length > 1)
+    //     {
+    //         UnityEngine.Debug.LogError("Another instance of the game is already running.");
+    //         Canvas.SetActive(true);
+    //         return;
+    //     }
+    //     #endif
+    //     PlayFabManager.Login();
+    //     EventBus.Subscribe<EnumPlayFabSignals>(SignalBox);
+    // }
 
     public void Quit()
     {
         Application.Quit();
     }
 
-    void SignalBox(object Obj)
+    void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {
@@ -59,8 +58,5 @@ public class PlayFabAutorization : MonoBehaviour
         EventBus.Invoke(EnumSignals.LoadingScene);     
     }
 
-    void OnDestroy()
-    {
-        EventBus.Unsubscribe(SignalBox);
-    }
+    void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);
 }

@@ -46,7 +46,7 @@ public class HexMeshCombiner : BaseSignal
 
             foreach (var Hex in HiddenHexes)
             {
-                Hex.gameObject.SetActive(true);
+                Hex?.gameObject.SetActive(true);
             }
         }
     }

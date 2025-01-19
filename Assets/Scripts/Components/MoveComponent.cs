@@ -7,7 +7,6 @@ public class MoveComponent : Components, IFixedUpdate
 {
     EventBus EventBus;
     WorldUpdateSystem WorldUpdateSystem;
-    StepByStepSystem StepByStepSystem;
     [ReadOnly] public Vector3Int Position;
 
     [SerializeField] float MoveSpeed;
@@ -23,9 +22,13 @@ public class MoveComponent : Components, IFixedUpdate
 
     private HashSet<Hex> AvailableHexes = new HashSet<Hex>();
 
-    Hex TargetHex;
+    public Rigidbody RB {get; private set;}
+    public Collider Collider {get; private set;}
 
-    Unit Master;
+    [SerializeField] private float FlightSpeed = 10f;
+    [SerializeField] private float JumpImpulseHeight = 2f;
+
+    Hex TargetHex;
 
     void OnValidate()
     {
@@ -36,9 +39,10 @@ public class MoveComponent : Components, IFixedUpdate
 
     public override void Initialization(Unit Master)
     {
+        base.Initialization(Master);
+        
         _CurrentTurnCount = _MaxStepsPerTurn;
         ExtractSystems(Master.Systems);
-        this.Master = Master;
     }
 
     protected override void ExtractSystems(HashSet<object> Systems)
@@ -49,84 +53,167 @@ public class MoveComponent : Components, IFixedUpdate
             {
                 case EventBus EventBus:
                     this.EventBus = EventBus;
-                    EventBus.Subscribe(SignalBox);
+                    EventBus.Subscribe<PickUnitSignal>(SignalBox);
                     break;
                 case WorldUpdateSystem WorldUpdateSystem:
                     this.WorldUpdateSystem = WorldUpdateSystem;
                     break;
-                case StepByStepSystem StepByStepSystem:
-                    this.StepByStepSystem = StepByStepSystem;
+                case Rigidbody RB :
+                    this.RB = RB;
+                    break; 
+                case Collider Collider :
+                    this.Collider = Collider;
                     break;
-                default:
-                    break;
+                default: break;
             }
         }
     }
 
-    protected override void SignalBox(object Obj)
+    protected override void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {
-            case PathSignal PathSignal:
-                switch (Master.State)
+            case PickUnitSignal PickUnitSignal :
+                if(PickUnitSignal.Unit.State != EnumUnitState.Move)
                 {
-                    case EnumUnitState.Stay :
-                        EmitSignal(EnumMoveSignals.StartMoving);
-                        AvailableHexes.Clear();
-                        AvailableHexes = PathSignal.Hexes.ToHashSet();
-                        WorldUpdateSystem.Subscribe(this);                     
-                        break;
-                    case EnumUnitState.Jump :
-                        var Hex = PathSignal.Hexes.FirstOrDefault();
-                        StartCoroutine(JumpMoveCoroutine(transform.position, Hex.transform.position, 0.5f));
-                        Position = Hex.Position;
-                        EmitSignal(EnumMoveSignals.StopJump);
-                        break;
-                    default: break;
+                    EmitSignal(EnumMoveSignals.StopMoving);
                 }
                 break;
+            default: break;
+        }
+    }
 
-            case EnumSignals.NextTurn:
-                _CurrentTurnCount = _MaxStepsPerTurn;
+    public void ReadyToJump() => EmitSignal(EnumMoveSignals.StartJump); 
+
+    public void SetNewPath(HashSet<Hex> Path)
+    {
+        switch (Master.State)
+        {
+            case EnumUnitState.Stay :
+                EmitSignal(EnumMoveSignals.StartMoving);
+                var StartHex = Path.FirstOrDefault(x => x.Position == Position);
+                StartHex.SetIsWalkable(true); 
+                StartHex.SetPickState(false);
+                Path.Remove(StartHex);
+                AvailableHexes.Clear();
+                AvailableHexes.UnionWith(Path);
+                WorldUpdateSystem.Subscribe(this);                 
                 break;
-            
-            case UnitJumpSignal JumpSignal :
-                if(Master.State == EnumUnitState.Stay)
-                {
-                    EmitSignal(EnumMoveSignals.StartJump);
-                    EventBus.Invoke(new JumpSignal(this));
-                }                        
-                break;             
+            case EnumUnitState.Jump :
+                var Hex = Path.FirstOrDefault();
+                Path.FirstOrDefault(x => x.Position != Hex.Position).SetIsWalkable(true);
+                StartCoroutine(SimulateJumpWithoutPhysics(transform.position, Hex.transform.position, FlightSpeed));
+                Position = Hex.Position;
+                Hex.SetIsWalkable(false);     
+                break;
             default: break;
         }
     }
 
     public void FixedRefresh() => Move();
 
-
-    IEnumerator JumpMoveCoroutine(Vector3 startPosition, Vector3 endPosition, float duration)
+    public bool CanJumpToTarget(Vector3 Target)
     {
-        transform.LookAt(endPosition);
-        transform.eulerAngles = new Vector3(0, transform.eulerAngles.y, 0);
-
-        float elapsedTime = 0f;
-
-        while (elapsedTime < duration)
+        if (!(Collider is CapsuleCollider CapsuleCollider))
         {
-            float t = elapsedTime / duration;
-            float height = Mathf.Sin(t * Mathf.PI) * JumpLength;
-
-            transform.position = Vector3.Lerp(startPosition, endPosition, t);
-            transform.position += new Vector3(0, height, 0);
-
-            elapsedTime += Time.deltaTime;
-            yield return null;
+            Debug.LogError("Collider is not a CapsuleCollider! Cannot Check Path.");
+            return false;
         }
 
-        transform.position = endPosition;
+        Vector3 ColliderOffset = CapsuleCollider.center;
+        float Radius = CapsuleCollider.radius;
+        float Height = CapsuleCollider.height;
+
+        List<Vector3> TrajectoryPoints = GenerateTrajectory(transform.position, Target);
+
+        foreach (Vector3 Point in TrajectoryPoints)
+        {
+            Vector3 CapsuleStart = Point + ColliderOffset + new Vector3(0, Radius, 0);
+            Vector3 CapsuleEnd = Point + ColliderOffset + new Vector3(0, Height - Radius * 2, 0);
+
+            Collider[] HitColliders = Physics.OverlapCapsule(
+                CapsuleStart,
+                CapsuleEnd,
+                Radius,
+                ~0,
+                QueryTriggerInteraction.Ignore
+            );
+
+            foreach (var Hit in HitColliders)
+            {
+                if (Hit != Collider)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
-    private void Move()
+    List<Vector3> GenerateTrajectory(Vector3 Start, Vector3 Target)
+    {
+        List<Vector3> TrajectoryPoints = new List<Vector3>();
+
+        GameObject TempObject = new GameObject("TrajectorySimulator");
+        Rigidbody TempRb = TempObject.AddComponent<Rigidbody>();
+
+        TempObject.transform.position = Start;
+        TempRb.isKinematic = false;
+        TempRb.useGravity = true;
+
+        Vector3 Direction = Target - Start;
+
+        float MaxHeight = Mathf.Max(Start.y + JumpImpulseHeight, Target.y + JumpImpulseHeight);
+
+        float TimeToMaxHeight = Mathf.Sqrt(2 * (MaxHeight - Start.y) / -Physics.gravity.y);
+        float TimeToFall = Mathf.Sqrt(2 * (MaxHeight - Target.y) / -Physics.gravity.y);
+        float TotalTime = TimeToMaxHeight + TimeToFall;
+
+        float Vx = Direction.x / TotalTime;
+        float Vz = Direction.z / TotalTime;
+
+        float Vy = Mathf.Sqrt(2 * -Physics.gravity.y * (MaxHeight - Start.y));
+
+        Vector3 InitialVelocity = new Vector3(Vx, Vy, Vz);
+        TempRb.velocity = InitialVelocity;
+
+        float SimulationTime = 0f;
+        while (SimulationTime < TotalTime)
+        {
+            TrajectoryPoints.Add(TempObject.transform.position);
+
+            TempRb.velocity += Physics.gravity * Time.fixedDeltaTime;
+            TempObject.transform.position += TempRb.velocity * Time.fixedDeltaTime;
+
+            SimulationTime += Time.fixedDeltaTime;
+        }
+
+        if (TrajectoryPoints.Last() != Target) TrajectoryPoints.Add(Target);
+
+        Destroy(TempObject);
+
+        return TrajectoryPoints;
+    }
+
+    IEnumerator SimulateJumpWithoutPhysics(Vector3 Start, Vector3 Target, float SimulationSpeed)
+    {
+        List<Vector3> trajectoryPoints = GenerateTrajectory(Start, Target);
+
+        transform.LookAt(trajectoryPoints[trajectoryPoints.Count - 1]);
+
+        transform.eulerAngles = new Vector3(0, transform.eulerAngles.y, 0);
+
+        foreach (Vector3 Point in trajectoryPoints)
+        {
+            transform.position = Point;
+            yield return new WaitForSeconds(Time.fixedDeltaTime / SimulationSpeed);
+        }
+
+        EmitSignal(EnumMoveSignals.StopJump);
+    }
+
+    void Move()
     {
         if(TargetHex == null)
         {
@@ -143,6 +230,7 @@ public class MoveComponent : Components, IFixedUpdate
             _CurrentTurnCount--;
             TargetHex.SetPickState(false);
             Position = TargetHex.Position;
+            if(AvailableHexes.Count == 1) TargetHex.SetIsWalkable(false);
             AvailableHexes.Remove(TargetHex);
             TargetHex = null;
 
@@ -155,9 +243,9 @@ public class MoveComponent : Components, IFixedUpdate
         }
     }
 
-    private void OnDestroy()
+    void OnDestroy()
     {
-        EventBus?.Unsubscribe(SignalBox);
+        EventBus.UnsubscribeFromAll<object>(SignalBox);
         WorldUpdateSystem?.Unsubscribe(this);
     }
 }

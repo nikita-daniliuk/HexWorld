@@ -1,18 +1,19 @@
+using System;
 using UnityEngine;
 
 public class AnimatorComponent : Components
 {
-    Unit Master;
-
     [SerializeField] Animator Animator;
 
     public override void Initialization(Unit Master)
     {
+        base.Initialization(Master);
+        
         this.Master = Master;
         Master.Subscribe(SignalBox);
     }
 
-    protected override void SignalBox(object Obj)
+    protected override void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {

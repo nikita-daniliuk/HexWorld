@@ -41,6 +41,7 @@ public class HexGridTool : BaseSignal
 
     Hex Hex;
 
+    #if UNITY_EDITOR
     private void OnEnable()
     {
         HexGridGenerator = gameObject.GetComponent<HexGridGenerator>();
@@ -50,21 +51,17 @@ public class HexGridTool : BaseSignal
 
         HexWalkable.HideHexWalkableMap();
 
-        #if UNITY_EDITOR
         if(Application.isPlaying) return;
         Selection.selectionChanged += OnSelectionChanged;
         SceneView.duringSceneGui += OnSceneGUI;
-        #endif
     }
 
     private void OnDisable()
     {
-        #if UNITY_EDITOR
         if(Application.isPlaying) return;
         Selection.selectionChanged -= OnSelectionChanged;
         SceneView.duringSceneGui -= OnSceneGUI;
         Mode = EnumHexGridMode.Generation;
-        #endif
     }
 
     private void OnSelectionChanged()
@@ -79,7 +76,6 @@ public class HexGridTool : BaseSignal
         }
     }
 
-    #if UNITY_EDITOR
     private void OnSceneGUI(SceneView sceneView)
     {
         if (Application.isPlaying || Selection.activeObject != gameObject) return;
@@ -159,6 +155,7 @@ public class HexGridTool : BaseSignal
                     {
                         case EnumTransformTool.SetHeight :
                             Hex?.SetHeight(TargetHeight);
+                            Hex?.SetLength(TargetHeight);
                             break;
                         case EnumTransformTool.SetLenght :
                             Hex?.SetLength(TargetLenght);
@@ -204,5 +201,6 @@ public class HexGridTool : BaseSignal
         Hit = hit;
         return Hex;
     }
-    #endif
+    
+    #endif   
 }

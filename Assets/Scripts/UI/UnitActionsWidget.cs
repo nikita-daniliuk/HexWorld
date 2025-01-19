@@ -1,15 +1,15 @@
 public class UnitActionsWidget : Widgets
 {
-    Player Player;
+    Unit Unit;
 
-    void Awake() => Subscribe();
+    void Awake() => EventBus.Subscribe<PickUnitSignal>(SignalBox);
 
-    protected override void SignalBox(object Obj)
+    protected override void SignalBox<T>(T Obj)
     {
         switch (Obj)
         {
-            case Player Player :
-                this.Player = Player;
+            case PickUnitSignal PickUnitSignal :
+                Unit = PickUnitSignal.Unit;
                 break;
             default: break;
         }
@@ -17,11 +17,11 @@ public class UnitActionsWidget : Widgets
 
     public void Jump()
     {
-        EventBus.Invoke(new UnitJumpSignal(Player));
+        EventBus.Invoke(new UnitJumpSignal(Unit));
     }
 
     public void Walk()
     {
-        EventBus.Invoke(new UnitWalkSignal(Player));
+        EventBus.Invoke(new UnitWalkSignal(Unit));
     }
 }

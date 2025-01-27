@@ -23,15 +23,15 @@ public class HexWalkable : BaseSignal
         return HexParent != null;
     }
 
-    public void Refresh() => AllHexes.Clear();
+    public void Refresh() => AllHexes?.Clear();
 
     public void ShowHexWalkableMap()
     {
         if(!IsShowing)
         {
             FindHexParent();
-            AllHexes = HexParent.GetComponentsInChildren<Hex>().ToHashSet();
-
+            AllHexes = HexParent?.GetComponentsInChildren<Hex>()?.ToHashSet();
+            if(AllHexes == null || AllHexes.Count == 0) return;
             foreach (var Hex in AllHexes) SetWalkableMap(Hex);    
             IsShowing = true;        
         }
@@ -48,11 +48,12 @@ public class HexWalkable : BaseSignal
         if(!Application.isPlaying)
         {
             FindHexParent();
-            AllHexes = HexParent.GetComponentsInChildren<Hex>().ToHashSet();
+            AllHexes = HexParent?.GetComponentsInChildren<Hex>()?.ToHashSet();
+            if(AllHexes == null || AllHexes.Count == 0) return;
         }
         else
         {
-            AllHexes = Pool.GetAllOfType<Hex>().ToHashSet();
+            AllHexes = Pool.GetAllOfType<Hex>()?.ToHashSet();
         }
 
         foreach (var Hex in AllHexes)

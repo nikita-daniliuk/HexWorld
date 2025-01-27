@@ -33,8 +33,6 @@ public class HexGridToolEditor : Editor
             }
         }
 
-        Undo.RecordObject(HexGridTool, "Modify HexGridTool");
-
         if (PreviousMode == EnumHexGridMode.SetWalkable && HexGridTool.Mode != EnumHexGridMode.SetWalkable)
         {
             HexGridTool.HexWalkable.HideHexWalkableMap();
@@ -48,18 +46,16 @@ public class HexGridToolEditor : Editor
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.Space();
-
         switch (HexGridTool.Mode)
         {
             case EnumHexGridMode.Generation:
                 HexGridTool.GenerationType = (EnumHexGridGenerationType)EditorGUILayout.EnumPopup("Generation Type", HexGridTool.GenerationType);
-                HexGridTool.HexPrefab = (Hex)EditorGUILayout.ObjectField("Hex Prefab", HexGridTool.HexPrefab , typeof(Hex), false);
+                HexGridTool.HexPrefab = (Hex)EditorGUILayout.ObjectField("Hex Prefab", HexGridTool.HexPrefab, typeof(Hex), false);
 
                 if (HexGridTool.HexPaintOptions.Count == 0)
                 {
                     EditorGUILayout.HelpBox("Warning! If you do not add a paint value in Paint mode, it will not work correctly.", MessageType.Warning);
-                } 
+                }
                 else
                 {
                     ShowPaintPannel(HexGridTool);
@@ -70,12 +66,12 @@ public class HexGridToolEditor : Editor
                     case EnumHexGridGenerationType.Hexagonal:
                         HexGridTool.ArenaRadius = EditorGUILayout.IntField("Arena Radius", HexGridTool.ArenaRadius);
                         HexGridTool.SquareWidth = 0;
-                        HexGridTool.SquareHeight = 0;
+                        HexGridTool.SquareLenght = 0;
                         break;
 
                     case EnumHexGridGenerationType.Square:
                         HexGridTool.SquareWidth = EditorGUILayout.IntField("Square Width", HexGridTool.SquareWidth);
-                        HexGridTool.SquareHeight = EditorGUILayout.IntField("Square Height", HexGridTool.SquareHeight);
+                        HexGridTool.SquareLenght = EditorGUILayout.IntField("Square Height", HexGridTool.SquareLenght);
                         break;
 
                     default: break;
@@ -88,26 +84,38 @@ public class HexGridToolEditor : Editor
                     HexGridTool.HexWalkable.Refresh();
                     HexGridTool.HexCreator.Refresh();
 
+                    HexGridTool.HexWalkable.ShowHexWalkableMap();
+
+                    EditorApplication.update += MonitorGenerationCompletion;
+
                     switch (HexGridTool.GenerationType)
                     {
                         case EnumHexGridGenerationType.Hexagonal:
-                            HexGridTool.HexGridGenerator.GenerateHexagonalGrid(HexGridTool.ArenaRadius, HexGridTool.TargetHeight, HexGridTool.HexPrefab, HexGridTool.HexPaintOptions);
+                            HexGridTool.HexGridGenerator.GenerateHexagonalGridWithJobs(HexGridTool.ArenaRadius, HexGridTool.TargetHeight, HexGridTool.HexPrefab, HexGridTool.HexPaintOptions);
                             break;
                         case EnumHexGridGenerationType.Square:
-                            HexGridTool.HexGridGenerator.GenerateHexagonalGridByDimensions(HexGridTool.SquareHeight, HexGridTool.SquareWidth, HexGridTool.TargetHeight, HexGridTool.HexPrefab , HexGridTool.HexPaintOptions);
+                            HexGridTool.HexGridGenerator.GenerateSquareGridWithJobs(HexGridTool.SquareWidth, HexGridTool.SquareLenght, HexGridTool.TargetHeight, HexGridTool.HexPrefab, HexGridTool.HexPaintOptions);
                             break;
                         default: break;
                     }
 
                     EditorUtility.SetDirty(HexGridTool);
                 }
+                if (HexGridTool.HexGridGenerator.GenerationTime > 0)
+                {
+                    EditorGUILayout.HelpBox($"Generation completed in {HexGridTool.HexGridGenerator.GenerationTime:F2} seconds.", MessageType.Info);
+                }
 
                 if (GUILayout.Button("Clear Hex Grid"))
                 {
+                    HexGridTool.HexWalkable.HideHexWalkableMap();
                     HexGridTool.HexWalkable.Refresh();
                     HexGridTool.HexCreator.Refresh();
                     HexGridTool.HexGridGenerator.ClearHexGrid();
+                    HexGridTool.HexGridGenerator.ResetProgress();
+
                     EditorUtility.SetDirty(HexGridTool);
+                    Repaint();
                 }
                 break;
 
@@ -280,6 +288,18 @@ public class HexGridToolEditor : Editor
         }
 
         EditorGUILayout.Space();        
+    }
+
+    private void MonitorGenerationCompletion()
+    {
+        HexGridTool HexGridTool = (HexGridTool)target;
+
+        if (HexGridTool.HexGridGenerator.GenerationTime > 0)
+        {
+            EditorApplication.update -= MonitorGenerationCompletion;
+
+            Repaint();
+        }
     }
 }
 #endif

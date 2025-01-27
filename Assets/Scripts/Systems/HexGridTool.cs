@@ -20,7 +20,7 @@ public class HexGridTool : BaseSignal
 
     [Header("Square Grid Settings")]
     public int SquareWidth;
-    public int SquareHeight;
+    public int SquareLenght;
 
     [Header("Paint Settings")]
     public List<HexPaintOption> HexPaintOptions;
@@ -155,7 +155,7 @@ public class HexGridTool : BaseSignal
                     {
                         case EnumTransformTool.SetHeight :
                             Hex?.SetHeight(TargetHeight);
-                            Hex?.SetLength(TargetHeight);
+                            Hex?.SetLength(Hex.Lenght);
                             break;
                         case EnumTransformTool.SetLenght :
                             Hex?.SetLength(TargetLenght);
@@ -168,7 +168,7 @@ public class HexGridTool : BaseSignal
             case EnumHexGridMode.Creation :
                 if(HexPrefab && Event.type == EventType.MouseDown && Event.button == 0)
                 {
-                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, HexPrefab.gameObject, HexPaintOptions, TargetHeight, TargetLenght, SquareWidth, SquareHeight);
+                    if(Hex) HexCreator.CreateHexNeighbor(Hex, Hit, HexPrefab.gameObject, HexPaintOptions, TargetHeight, TargetLenght);
                     Event.Use();    
                 }
                 break;

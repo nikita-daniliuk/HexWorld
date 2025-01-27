@@ -9,6 +9,7 @@ public class UnitActionsWidget : Widgets
         switch (Obj)
         {
             case PickUnitSignal PickUnitSignal :
+                Enable(true);
                 Unit = PickUnitSignal.Unit;
                 break;
             default: break;

@@ -35,7 +35,7 @@ public class MainCamera : BaseSignal
     private bool IsDragging;
     private bool IsRotating;
 
-    void Awake()
+    void Start()
     {
         Cam = GetComponent<Camera>();
         TargetPosition = transform.position;

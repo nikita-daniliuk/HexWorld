@@ -39,34 +39,20 @@ public class HexCreator : BaseSignal
         }
     }
 
-    public GameObject CreateHexNeighbor(
-        Hex HitHex,
-        RaycastHit Hit,
-        GameObject HexPrefab,
-        List<HexPaintOption> HexPaintOptions,
-        int TargetHeight,
-        int TargetLength,
-        int GridWidth,
-        int GridHeight
-    )
+    public GameObject CreateHexNeighbor(Hex HitHex, RaycastHit Hit, GameObject HexPrefab, List<HexPaintOption> HexPaintOptions, int TargetHeight, int TargetLength)
     {
         if (!FindHexParent()) return null;
 
         float Angle = Vector3.Angle(Hit.normal, Vector3.up);
         bool ClickedOnTop = Angle < 30f;
 
+        Vector3 NewRealPosition;
         Vector3Int NewCoords;
 
         if (ClickedOnTop)
         {
-            int NewTop = TargetHeight;
-
-            NewCoords = new Vector3Int(HitHex.Position.x, NewTop, HitHex.Position.z);
-
-            if (!IsValidHexPosition(NewCoords, NewTop, TargetLength))
-                return null;
-
-            TargetHeight = NewTop;
+            NewRealPosition = HitHex.transform.position + Vector3.up * TargetHeight;
+            NewCoords = new Vector3Int(HitHex.Position.x, HitHex.Position.y + TargetHeight, HitHex.Position.z);
         }
         else
         {
@@ -74,21 +60,20 @@ public class HexCreator : BaseSignal
                 .OrderBy(D =>
                     Vector3.Distance(
                         Hit.point,
-                        HexToPosition(HitHex.Position + D, GridWidth, GridHeight)
+                        HitHex.transform.position + DirectionToWorldOffset(D)
                     )
                 )
                 .First();
 
             NewCoords = HitHex.Position + ClosestDirection;
-
-            if (!IsValidHexPosition(NewCoords, TargetHeight, TargetLength))
-                return null;
+            NewRealPosition = HitHex.transform.position + DirectionToWorldOffset(ClosestDirection);
         }
 
-        Vector3 SpawnPosition = HexToPosition(NewCoords, GridWidth, GridHeight);
+        if (!IsValidHexPosition(NewCoords, TargetHeight, TargetLength))
+            return null;
 
         GameObject NewHex = Instantiate(HexPrefab, HexParent.transform);
-        NewHex.transform.position = SpawnPosition;
+        NewHex.transform.position = NewRealPosition;
 
         MeshRenderer SelectedHex = null;
         foreach (var Option in HexPaintOptions)
@@ -196,23 +181,10 @@ public class HexCreator : BaseSignal
         DestroyImmediate(Hex.gameObject);
     }
 
-    private Vector3 HexToPosition(Vector3Int Coords, int GridWidth, int GridHeight)
+    private Vector3 DirectionToWorldOffset(Vector3Int Direction)
     {
-        float X = Mathf.Sqrt(3) * Coords.x + (Mathf.Sqrt(3) / 2f) * Coords.z;
-        float Z = 1.5f * Coords.z;
-
-        Vector3 Offset = CalculateGridCenterOffset(GridWidth, GridHeight);
-        return new Vector3(X, 0, Z) - Offset;
-    }
-
-    private Vector3 CalculateGridCenterOffset(int GridWidth, int GridHeight)
-    {
-        float Width = Mathf.Sqrt(3) * GridWidth;
-        float Height = 1.5f * GridHeight;
-        return new Vector3(
-            Width / 2f - (Mathf.Sqrt(3) / 2f),
-            0,
-            Height / 2f - 0.75f
-        );
+        float X = Mathf.Sqrt(3) * Direction.x + (Mathf.Sqrt(3) / 2f) * Direction.z;
+        float Z = 1.5f * Direction.z;
+        return new Vector3(X, 0, Z);
     }
 }

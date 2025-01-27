@@ -10,7 +10,7 @@ public class HexMeshCombiner : BaseSignal
     [SerializeField, ReadOnly] List<MeshFilter> OriginalHexFilters = new List<MeshFilter>();
     [SerializeField, ReadOnly] List<Hex> HiddenHexes = new List<Hex>();
 
-    private GameObject CombinedMeshObject;
+    private List<GameObject> CombinedMeshObjects = new List<GameObject>();
 
     void Start()
     {
@@ -29,7 +29,7 @@ public class HexMeshCombiner : BaseSignal
 
         if (OriginalHexFilters.Count > 0)
         {
-            CombineMeshes();
+            CombineMeshesByMaterial();
 
             foreach (var Hex in HiddenHexes)
             {
@@ -40,39 +40,51 @@ public class HexMeshCombiner : BaseSignal
 
     void OnDestroy()
     {
-        if (CombinedMeshObject != null)
+        foreach (var CombinedMeshObject in CombinedMeshObjects)
         {
-            Destroy(CombinedMeshObject);
-
-            foreach (var Hex in HiddenHexes)
+            if (CombinedMeshObject != null)
             {
-                Hex?.gameObject.SetActive(true);
+                Destroy(CombinedMeshObject);
             }
+        }
+
+        foreach (var Hex in HiddenHexes)
+        {
+            Hex?.gameObject.SetActive(true);
         }
     }
 
-    void CombineMeshes()
+    void CombineMeshesByMaterial()
     {
-        CombineInstance[] Combine = new CombineInstance[OriginalHexFilters.Count];
+        var MaterialGroups = OriginalHexFilters
+            .GroupBy(Filter => Filter.GetComponent<MeshRenderer>().sharedMaterial)
+            .ToDictionary(Group => Group.Key, Group => Group.ToList());
 
-        for (int I = 0; I < OriginalHexFilters.Count; I++)
+        foreach (var MaterialGroup in MaterialGroups)
         {
-            Combine[I].mesh = OriginalHexFilters[I].sharedMesh;
-            Combine[I].transform = OriginalHexFilters[I].transform.localToWorldMatrix;
+            CombineInstance[] Combine = new CombineInstance[MaterialGroup.Value.Count];
+
+            for (int I = 0; I < MaterialGroup.Value.Count; I++)
+            {
+                Combine[I].mesh = MaterialGroup.Value[I].sharedMesh;
+                Combine[I].transform = MaterialGroup.Value[I].transform.localToWorldMatrix;
+            }
+
+            GameObject CombinedMeshObject = new GameObject($"CombinedHexMesh_{MaterialGroup.Key.name}");
+            MeshFilter CombinedMeshFilter = CombinedMeshObject.AddComponent<MeshFilter>();
+            MeshRenderer CombinedMeshRenderer = CombinedMeshObject.AddComponent<MeshRenderer>();
+
+            Mesh CombinedMesh = new Mesh();
+            CombinedMesh.CombineMeshes(Combine);
+            CombinedMeshFilter.mesh = CombinedMesh;
+
+            CombinedMeshRenderer.material = MaterialGroup.Key;
+
+            CombinedMeshObject.isStatic = true;
+
+            CombinedMeshObjects.Add(CombinedMeshObject);
+
+            EmitSignal(new Message(gameObject, $"Combined meshes for material {MaterialGroup.Key.name}: {MaterialGroup.Value.Count}"));
         }
-
-        CombinedMeshObject = new GameObject("CombinedHexMesh");
-        MeshFilter CombinedMeshFilter = CombinedMeshObject.AddComponent<MeshFilter>();
-        MeshRenderer CombinedMeshRenderer = CombinedMeshObject.AddComponent<MeshRenderer>();
-
-        Mesh CombinedMesh = new Mesh();
-        CombinedMesh.CombineMeshes(Combine);
-        CombinedMeshFilter.mesh = CombinedMesh;
-
-        CombinedMeshRenderer.material = OriginalHexFilters[0].GetComponent<MeshRenderer>().material;
-
-        CombinedMeshObject.isStatic = true;
-
-        EmitSignal(new Message(gameObject, $"Combined meshes: {OriginalHexFilters.Count}"));
     }
 }

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class EventBus : ISystems
 {
     private readonly Dictionary<object, List<Delegate>> EventHandlers = new Dictionary<object, List<Delegate>>();
-    private const string GlobalKey = "GlobalKey";
+    private object GlobalKey = typeof(object);
 
     public void Subscribe<T>(Action<T> Listener)
     {
@@ -68,7 +68,7 @@ public class EventBus : ISystems
 
         if (EventHandlers.ContainsKey(key))
         {
-            EventHandlers[key].RemoveAll(d => d == null || d.Target as UnityEngine.Object == null);
+            EventHandlers[key].RemoveAll(d => d == null || d.Target == null);
 
             foreach (var Listener in EventHandlers[key])
             {
@@ -81,7 +81,7 @@ public class EventBus : ISystems
 
         if (EventHandlers.ContainsKey(GlobalKey))
         {
-            EventHandlers[GlobalKey].RemoveAll(d => d == null || d.Target as UnityEngine.Object == null);
+            EventHandlers[GlobalKey].RemoveAll(d => d == null || d.Target == null);
 
             foreach (var Listener in EventHandlers[GlobalKey])
             {

@@ -1,101 +1,138 @@
-using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class HexGridGenerator : BaseSignal
 {
     public Dictionary<Vector3Int, Hex> HexDictionary = new Dictionary<Vector3Int, Hex>();
     private GameObject HexParent;
+    public float GenerationTime { get; private set; }
 
-    public void GenerateHexagonalGrid(int ArenaRadius, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
+    public void GenerateHexagonalGridWithJobs(int ArenaRadius, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
     {
         ClearHexGrid();
         FindOrCreateHexParent();
 
-        for (int Q = -ArenaRadius; Q <= ArenaRadius; Q++)
-        {
-            for (int R = Mathf.Max(-ArenaRadius, -Q - ArenaRadius); R <= Mathf.Min(ArenaRadius, -Q + ArenaRadius); R++)
-            {
-                Vector3Int Coords = new Vector3Int(Q, TargetHeight, R);
-                if (Ground == null)
-                {
-                    Debug.LogError("Ground prefab is not assigned.");
-                    return;
-                }
-
-                Hex Hex = Instantiate(Ground, HexToPosition(Coords.x, Coords.z), Quaternion.identity, HexParent.transform);
-
-                Hex.Initialization(new HashSet<object> { Coords });
-
-                MeshRenderer SelectedHex = null;
-                foreach (var Option in HexPaintOptions)
-                {
-                    if (Option.IsSelected && Option.HexPrefab != null)
-                    {
-                        SelectedHex = Option.HexPrefab;
-                        break;
-                    }
-                }
-
-                Hex.SetHexVisual(SelectedHex);
-
-                Hex.SetHeight(TargetHeight);
-
-                Hex.SetLength(TargetHeight);
-
-                HexDictionary[Coords] = Hex;
-            }
-        }
-
-        ConnectNeighborHexes();
-        HexParent.name = "Hex";
+        List<Vector3Int> ValidCoords = GenerateHexCoordinates(ArenaRadius);
+        GenerateGridWithJobs(ValidCoords, TargetHeight, Ground, HexPaintOptions);
     }
 
-    public void GenerateHexagonalGridByDimensions(int SquareHeight, int SquareWidth, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
+    public void GenerateSquareGridWithJobs(int SquareWidth, int SquareHeight, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
     {
         ClearHexGrid();
         FindOrCreateHexParent();
 
-        Vector3 centerOffset = CalculateGridCenterOffset(SquareHeight, SquareWidth);
+        List<Vector3Int> ValidCoords = GenerateSquareCoordinates(SquareWidth, SquareHeight);
+        GenerateGridWithJobs(ValidCoords, TargetHeight, Ground, HexPaintOptions);
+    }
 
-        for (int R = 0; R < SquareHeight; R++)
+    private void GenerateGridWithJobs(List<Vector3Int> ValidCoords, int TargetHeight, Hex Ground, List<HexPaintOption> HexPaintOptions)
+    {
+        float StartTime = Time.realtimeSinceStartup;
+
+        int TotalHexes = ValidCoords.Count;
+
+        NativeArray<Vector3Int> CoordsArray = new NativeArray<Vector3Int>(TotalHexes, Allocator.TempJob);
+        NativeArray<Vector3> PositionsArray = new NativeArray<Vector3>(TotalHexes, Allocator.TempJob);
+
+        for (int i = 0; i < TotalHexes; i++)
         {
-            for (int Q = 0; Q < SquareWidth; Q++)
-            {
-                int offset = R / 2;
-                Vector3Int Coords = new Vector3Int(Q - offset, TargetHeight, R);
-                
-                if (Ground == null)
-                {
-                    Debug.LogError("Ground prefab is not assigned.");
-                    return;
-                }
-
-                Hex Hex = Instantiate(Ground, HexToPosition(Coords.x, Coords.z) - centerOffset, Quaternion.identity, HexParent.transform);
-
-                Hex.Initialization(new HashSet<object> { Coords });
-
-                MeshRenderer SelectedHex = null;
-                foreach (var Option in HexPaintOptions)
-                {
-                    if (Option.IsSelected && Option.HexPrefab != null)
-                    {
-                        SelectedHex = Option.HexPrefab;
-                        break;
-                    }
-                }
-
-                Hex.SetHexVisual(SelectedHex);
-
-                Hex.SetHeight(TargetHeight);
-
-                Hex.SetLength(TargetHeight);
-
-                HexDictionary[Coords] = Hex;
-            }
+            CoordsArray[i] = ValidCoords[i];
         }
+
+        HexGridJob hexGridJob = new HexGridJob
+        {
+            Coords = CoordsArray,
+            Positions = PositionsArray
+        };
+
+        JobHandle jobHandle = hexGridJob.Schedule(TotalHexes, 64);
+        jobHandle.Complete();
+
+        Vector3 CenterOfMass = Vector3.zero;
+        for (int i = 0; i < TotalHexes; i++)
+        {
+            CenterOfMass += PositionsArray[i];
+        }
+        CenterOfMass /= TotalHexes;
+
+        for (int i = 0; i < TotalHexes; i++)
+        {
+            Vector3Int Coords = CoordsArray[i];
+            Vector3 Position = PositionsArray[i] - CenterOfMass;
+
+            Hex Hex = Instantiate(Ground, Position, Quaternion.identity, HexParent.transform);
+            Hex.Initialization(new HashSet<object> { Coords });
+
+            MeshRenderer SelectedHex = null;
+            foreach (var Option in HexPaintOptions)
+            {
+                if (Option.IsSelected && Option.HexPrefab != null)
+                {
+                    SelectedHex = Option.HexPrefab;
+                    break;
+                }
+            }
+
+            Hex.SetHexVisual(SelectedHex);
+            Hex.SetHeight(TargetHeight);
+            Hex.SetLength(TargetHeight);
+
+            HexDictionary[Coords] = Hex;
+        }
+
+        CoordsArray.Dispose();
+        PositionsArray.Dispose();
 
         ConnectNeighborHexes();
         HexParent.name = "Hex";
+
+        GenerationTime = Time.realtimeSinceStartup - StartTime;
+        Debug.Log($"Grid generation completed in {GenerationTime:F2} seconds.");
+    }
+
+    private List<Vector3Int> GenerateHexCoordinates(int Radius)
+    {
+        List<Vector3Int> Coords = new List<Vector3Int>();
+
+        for (int Q = -Radius; Q <= Radius; Q++)
+        {
+            for (int R = Mathf.Max(-Radius, -Q - Radius); R <= Mathf.Min(Radius, -Q + Radius); R++)
+            {
+                Coords.Add(new Vector3Int(Q, 0, R));
+            }
+        }
+
+        return Coords;
+    }
+
+    private List<Vector3Int> GenerateSquareCoordinates(int Width, int Height)
+    {
+        List<Vector3Int> Coords = new List<Vector3Int>();
+
+        Vector3 CenterOffset = CalculateGridCenterOffset(Height, Width);
+
+        for (int R = 0; R < Height; R++)
+        {
+            int Offset = R / 2;
+
+            for (int Q = 0; Q < Width; Q++)
+            {
+                Vector3Int CoordsWithoutCentering = new Vector3Int(Q - Offset, 0, R);
+                Vector3Int CenteredCoords = CoordsWithoutCentering - Vector3Int.RoundToInt(CenterOffset);
+                Coords.Add(CenteredCoords);
+            }
+        }
+
+        return Coords;
+    }
+
+    private Vector3 CalculateGridCenterOffset(int SquareHeight, int SquareWidth)
+    {
+        float Width = Mathf.Sqrt(3) * (SquareWidth - 1);
+        float Height = 1.5f * (SquareHeight - 1);
+        return new Vector3(Width / 2f, 0, Height / 2f);
     }
 
     private void ConnectNeighborHexes()
@@ -107,45 +144,18 @@ public class HexGridGenerator : BaseSignal
 
             HashSet<Hex> Neighbors = new HashSet<Hex>();
 
-            foreach (Vector3Int Direction in GetHexDirections())
+            foreach (Vector3Int Direction in HexLibrary.GetHexDirections())
             {
                 Vector3Int NeighborCoords = Coords + Direction;
 
-                if (HexDictionary.TryGetValue(NeighborCoords, out Hex neighbor))
+                if (HexDictionary.TryGetValue(NeighborCoords, out Hex Neighbor))
                 {
-                    Neighbors.Add(neighbor);
+                    Neighbors.Add(Neighbor);
                 }
             }
 
             Hex.SetNeighborHexes(Neighbors);
         }
-    }
-
-    private List<Vector3Int> GetHexDirections()
-    {
-        return new List<Vector3Int>
-        {
-            new Vector3Int(1, 0, 0),
-            new Vector3Int(0, 0, 1),
-            new Vector3Int(-1, 0, 1),
-            new Vector3Int(-1, 0, 0),
-            new Vector3Int(0, 0, -1),
-            new Vector3Int(1, 0, -1)
-        };
-    }
-
-    private Vector3 HexToPosition(int Q, int R)
-    {
-        float x = Mathf.Sqrt(3) * Q + Mathf.Sqrt(3) / 2 * R;
-        float z = 3.0f / 2 * R;
-        return new Vector3(x, 0, z);
-    }
-
-    private Vector3 CalculateGridCenterOffset(int SquareWidth, int SquareHeight)
-    {
-        float Width = Mathf.Sqrt(3) * SquareWidth;
-        float Height = 1.5f * SquareHeight;
-        return new Vector3(Width / 2 - 1 * Mathf.Sqrt(3) / 2, 0, Height / 2 - 0.75f);
     }
 
     public void ClearHexGrid()
@@ -187,5 +197,25 @@ public class HexGridGenerator : BaseSignal
             HexParent = new GameObject("Hex");
             HexParent.transform.SetParent(PoolParent.transform);
         }
+    }
+
+    public void ResetProgress() => GenerationTime = 0f;
+}
+
+public struct HexGridJob : IJobParallelFor
+{
+    [ReadOnly]
+    public NativeArray<Vector3Int> Coords;
+
+    [WriteOnly]
+    public NativeArray<Vector3> Positions;
+
+    public void Execute(int Index)
+    {
+        Vector3Int Coords = this.Coords[Index];
+
+        float x = Mathf.Sqrt(3) * Coords.x + Mathf.Sqrt(3) / 2 * Coords.z;
+        float z = 3.0f / 2 * Coords.z;
+        Positions[Index] = new Vector3(x, 0, z);
     }
 }

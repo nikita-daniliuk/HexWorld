@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Pool : ISystems
+public class Pool
 {
     GameObject PoolFolder;
     private Dictionary<string, GameObject> ParentFolders = new Dictionary<string, GameObject>();

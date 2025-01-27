@@ -1,24 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
-public class EventBus : ISystems
+public class EventBus
 {
-    private readonly Dictionary<object, List<Delegate>> EventHandlers = new Dictionary<object, List<Delegate>>();
+    private readonly Dictionary<object, HashSet<Delegate>> EventHandlers = new Dictionary<object, HashSet<Delegate>>();
+    
     private object GlobalKey = typeof(object);
 
     public void Subscribe<T>(Action<T> Listener)
     {
         if (Listener == null) return;
 
-        var key = typeof(T);
-        if (!EventHandlers.ContainsKey(key))
+        var Key = typeof(T);
+        if (!EventHandlers.ContainsKey(Key))
         {
-            EventHandlers[key] = new List<Delegate>();
+            EventHandlers[Key] = new HashSet<Delegate>();
         }
 
-        if (!EventHandlers[key].Contains(Listener))
+        if (!EventHandlers[Key].Contains(Listener))
         {
-            EventHandlers[key].Add(Listener);
+            EventHandlers[Key].Add(Listener);
         }
     }
 
@@ -28,7 +30,7 @@ public class EventBus : ISystems
 
         if (!EventHandlers.ContainsKey(GlobalKey))
         {
-            EventHandlers[GlobalKey] = new List<Delegate>();
+            EventHandlers[GlobalKey] = new HashSet<Delegate>();
         }
 
         if (!EventHandlers[GlobalKey].Contains(Listener))
@@ -41,13 +43,13 @@ public class EventBus : ISystems
     {
         if (Listener == null) return;
 
-        var key = typeof(T);
-        if (EventHandlers.ContainsKey(key))
+        var Key = typeof(T);
+        if (EventHandlers.ContainsKey(Key))
         {
-            EventHandlers[key].RemoveAll(d => d == null || d.Equals(Listener));
-            if (EventHandlers[key].Count == 0)
+            EventHandlers[Key].RemoveWhere(d => d == null || !ReferenceEquals(d.Target, Listener.Target));
+            if (EventHandlers[Key].Count == 0)
             {
-                EventHandlers.Remove(key);
+                EventHandlers.Remove(Key);
             }
         }
     }
@@ -56,38 +58,44 @@ public class EventBus : ISystems
     {
         if (Listener == null) return;
 
-        foreach (var key in EventHandlers.Keys)
+        foreach (var Key in EventHandlers.Keys.ToHashSet())
         {
-            EventHandlers[key].RemoveAll(d => d == null || d.Equals(Listener));
+            EventHandlers[Key] = EventHandlers[Key]
+                .Where(d => d == null || !ReferenceEquals(d.Target, Listener.Target))
+                .ToHashSet();
         }
     }
 
-    public void Invoke<T>(T payload)
-    {
-        var key = typeof(T);
+    public void Invoke<T>(T Payload)
+    {        
+        var Key = typeof(T);
 
-        if (EventHandlers.ContainsKey(key))
+        if (EventHandlers.ContainsKey(Key))
         {
-            EventHandlers[key].RemoveAll(d => d == null || d.Target == null);
+            EventHandlers[Key].RemoveWhere(d => d == null || d.Target == null);
 
-            foreach (var Listener in EventHandlers[key])
+            var ListenersCopy = new HashSet<Delegate>(EventHandlers[Key]);
+
+            foreach (var Listener in ListenersCopy)
             {
                 if (Listener is Action<T> TypedListener)
                 {
-                    TypedListener.Invoke(payload);
+                    TypedListener.Invoke(Payload);
                 }
             }
         }
 
         if (EventHandlers.ContainsKey(GlobalKey))
         {
-            EventHandlers[GlobalKey].RemoveAll(d => d == null || d.Target == null);
+            EventHandlers[GlobalKey].RemoveWhere(d => d == null || d.Target == null);
 
-            foreach (var Listener in EventHandlers[GlobalKey])
+            var GlobalListenersCopy = new HashSet<Delegate>(EventHandlers[GlobalKey]);
+
+            foreach (var Listener in GlobalListenersCopy)
             {
                 if (Listener is Action<T> TypedListener)
                 {
-                    TypedListener.Invoke(payload);
+                    TypedListener.Invoke(Payload);
                 }
             }
         }

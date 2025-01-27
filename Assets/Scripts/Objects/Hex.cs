@@ -39,6 +39,14 @@ public class Hex : Unit
         UpdateEmblemPosition();
     }
 
+    public void SetLength(int Lenght)
+    {
+        _Lenght = Lenght;
+        transform.localScale = new Vector3(1, Lenght, 1);
+
+        UpdateEmblemPosition();
+    }
+
     public void UpdateEmblemPosition()
     {
         Pick.transform.position = new Vector3(Pick.transform.position.x, Position.y - 1 + 0.1f, Pick.transform.position.z);
@@ -61,12 +69,6 @@ public class Hex : Unit
     public void SetIsWalkable(bool Value)
     {
         _IsWalkable = Value;
-    }
-
-    public void SetLength(int Lenght)
-    {
-        _Lenght = Lenght;
-        transform.localScale = new Vector3(1, Lenght, 1);
     }
 
     public void SetHexVisual(MeshRenderer NewHexVisual)

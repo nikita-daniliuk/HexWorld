@@ -301,5 +301,11 @@ public class PathFinder : MonoBehaviour
 
     private int GetFlatOrDownCost() => 1;
 
-    void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);
+    void OnDestroy()
+    {
+        EventBus.Unsubscribe<PickHexSignal>(SignalBox);
+        EventBus.Unsubscribe<UnitWalkSignal>(SignalBox);
+        EventBus.Unsubscribe<UnitJumpSignal>(SignalBox);
+        EventBus.Unsubscribe<PickUnitSignal>(SignalBox);
+    }
 }

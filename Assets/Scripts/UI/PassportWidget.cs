@@ -21,5 +21,5 @@ public class PassportWidget : Widgets
         }
     }
 
-    void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);
+    void OnDestroy() => EventBus.Unsubscribe<UnitRegPassportSignal>(SignalBox);
 }

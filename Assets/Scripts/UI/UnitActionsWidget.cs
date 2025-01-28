@@ -25,4 +25,6 @@ public class UnitActionsWidget : Widgets
     {
         EventBus.Invoke(new UnitWalkSignal(Unit));
     }
+
+    void OnDestroy() => EventBus.Unsubscribe<PickUnitSignal>(SignalBox);
 }

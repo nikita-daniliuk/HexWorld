@@ -12,9 +12,4 @@ public abstract class Widgets : BaseSignal
     }
 
     protected virtual void SignalBox<T>(T Obj){}
-
-    void OnDestroy()
-    {
-        EventBus?.UnsubscribeFromAll<object>(SignalBox);
-    }
 }

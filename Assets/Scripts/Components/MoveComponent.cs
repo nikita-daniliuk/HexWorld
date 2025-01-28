@@ -245,7 +245,7 @@ public class MoveComponent : Components, IFixedUpdate
 
     void OnDestroy()
     {
-        EventBus.UnsubscribeFromAll<object>(SignalBox);
+        EventBus.Unsubscribe<PickUnitSignal>(SignalBox);
         WorldUpdateSystem?.Unsubscribe(this);
     }
 }

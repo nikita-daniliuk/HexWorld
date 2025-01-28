@@ -50,6 +50,7 @@ public class HexMeshCombiner : BaseSignal
 
         foreach (var Hex in HiddenHexes)
         {
+            if(!Hex) continue;
             Hex?.gameObject.SetActive(true);
         }
     }

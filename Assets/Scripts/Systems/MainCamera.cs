@@ -156,5 +156,5 @@ public class MainCamera : BaseSignal
         transform.rotation = Quaternion.Euler(60f, TargetRotationY, 0f);
     }
     
-    void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);
+    void OnDestroy() => EventBus.Unsubscribe<PickUnitSignal>(SignalBox);
 }

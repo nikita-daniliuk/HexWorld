@@ -49,8 +49,13 @@ public class EventBus
         var Key = typeof(T);
         if (EventHandlers.ContainsKey(Key))
         {
-            EventHandlers[Key].RemoveWhere(x => x == null || !ReferenceEquals(x.Target, Listener.Target));
-            if (EventHandlers[Key].Count == 0)
+            var HandlersToRemove = EventHandlers[Key].Where(x => ReferenceEquals(x.Target, Listener.Target)).ToHashSet();
+            foreach (var handler in HandlersToRemove)
+            {
+                EventHandlers[Key].Remove(handler);
+            }
+
+            if (!EventHandlers[Key].Any())
             {
                 EventHandlers.Remove(Key);
             }
@@ -61,11 +66,20 @@ public class EventBus
     {
         if (Listener == null) return;
 
-        foreach (var Key in EventHandlers.Keys.ToHashSet())
+        foreach (var Key in EventHandlers.Keys.ToList())
         {
-            EventHandlers[Key] = EventHandlers[Key]
-                .Where(x => x == null || !ReferenceEquals(x.Target, Listener.Target))
-                .ToHashSet();
+            var HandlersToRemove = EventHandlers[Key]
+                .Where(x => ReferenceEquals(x.Target, Listener.Target)).ToHashSet();
+
+            foreach (var handler in HandlersToRemove)
+            {
+                EventHandlers[Key].Remove(handler);
+            }
+
+            if (!EventHandlers[Key].Any())
+            {
+                EventHandlers.Remove(Key);
+            }
         }
     }
 

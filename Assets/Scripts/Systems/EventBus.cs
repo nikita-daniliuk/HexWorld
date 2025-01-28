@@ -46,7 +46,7 @@ public class EventBus
         var Key = typeof(T);
         if (EventHandlers.ContainsKey(Key))
         {
-            EventHandlers[Key].RemoveWhere(d => d == null || !ReferenceEquals(d.Target, Listener.Target));
+            EventHandlers[Key].RemoveWhere(x => x == null || !ReferenceEquals(x.Target, Listener.Target));
             if (EventHandlers[Key].Count == 0)
             {
                 EventHandlers.Remove(Key);
@@ -61,58 +61,43 @@ public class EventBus
         foreach (var Key in EventHandlers.Keys.ToHashSet())
         {
             EventHandlers[Key] = EventHandlers[Key]
-                .Where(d => d == null || !ReferenceEquals(d.Target, Listener.Target))
+                .Where(x => x == null || !ReferenceEquals(x.Target, Listener.Target))
                 .ToHashSet();
         }
     }
 
     public void Invoke<T>(T Payload)
-    {
+    {        
         var Key = typeof(T);
 
-        if (EventHandlers.TryGetValue(Key, out var Listeners))
+        if (EventHandlers.ContainsKey(Key))
         {
-            foreach (var Listener in Listeners)
+            EventHandlers[Key].RemoveWhere(x => x == null || x.Target == null);
+
+            var ListenersCopy = new HashSet<Delegate>(EventHandlers[Key]);
+
+            foreach (var Listener in ListenersCopy)
             {
-                if (ValidateAndLogListener(Listener, Key))
+                if (Listener is Action<T> TypedListener)
                 {
-                    if (Listener is Action<T> TypedListener)
-                    {
-                        TypedListener.Invoke(Payload);
-                    }
+                    TypedListener.Invoke(Payload);
                 }
             }
         }
 
-        if (EventHandlers.TryGetValue(GlobalKey, out var GlobalListeners))
+        if (EventHandlers.ContainsKey(GlobalKey))
         {
-            foreach (var Listener in GlobalListeners)
+            EventHandlers[GlobalKey].RemoveWhere(x => x == null || x.Target == null);
+
+            var GlobalListenersCopy = new HashSet<Delegate>(EventHandlers[GlobalKey]);
+
+            foreach (var Listener in GlobalListenersCopy)
             {
-                if (ValidateAndLogListener(Listener, GlobalKey))
+                if (Listener is Action<T> TypedListener)
                 {
-                    if (Listener is Action<T> TypedListener)
-                    {
-                        TypedListener.Invoke(Payload);
-                    }
+                    TypedListener.Invoke(Payload);
                 }
             }
         }
-    }
-
-    private bool ValidateAndLogListener(Delegate Listener, object Key)
-    {
-        if (Listener == null)
-        {
-            UnityEngine.Debug.LogWarning($"[Event Key: {Key}] Null listener detected. Check your event subscriptions.");
-            return false;
-        }
-
-        if (Listener.Target == null)
-        {
-            UnityEngine.Debug.LogWarning($"[Event Key: {Key}] Listener target is null. Likely a stale listener was not unsubscribed properly. Method: {Listener.Method?.Name ?? "Unknown"}.");
-            return false;
-        }
-
-        return true;
     }
 }

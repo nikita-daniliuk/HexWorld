@@ -4,8 +4,9 @@ using System.Linq;
 
 public class EventBus
 {
+    public Action Update;
+
     private readonly Dictionary<object, HashSet<Delegate>> EventHandlers = new Dictionary<object, HashSet<Delegate>>();
-    
     private object GlobalKey = typeof(object);
 
     public void Subscribe<T>(Action<T> Listener)
@@ -67,7 +68,7 @@ public class EventBus
     }
 
     public void Invoke<T>(T Payload)
-    {        
+    {
         var Key = typeof(T);
 
         if (EventHandlers.ContainsKey(Key))
@@ -99,5 +100,12 @@ public class EventBus
                 }
             }
         }
+
+        Update?.Invoke();
+    }
+
+    public Dictionary<object, int> GetHandlersData()
+    {
+        return EventHandlers.ToDictionary(entry => entry.Key, entry => entry.Value.Count);
     }
 }

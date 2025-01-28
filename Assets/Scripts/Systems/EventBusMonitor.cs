@@ -4,6 +4,8 @@ using Zenject;
 
 public class EventBusMonitor : MonoBehaviour
 {
+    #if UNITY_EDITOR
+    
     [Inject] EventBus EventBus;
     public int TotalInvokeCount { get; private set; } = 0;
     public float CurrentInvokesPerSecond { get; private set; } = 0;
@@ -30,7 +32,7 @@ public class EventBusMonitor : MonoBehaviour
         float DeltaTime = Time.time - LastUpdateTime;
         if (DeltaTime >= 1f)
         {
-            CurrentInvokesPerSecond = InvokesSinceLastUpdate / DeltaTime;
+            CurrentInvokesPerSecond = Mathf.RoundToInt(InvokesSinceLastUpdate / DeltaTime);
 
             if (CurrentInvokesPerSecond > MaxInvokesPerSecond)
             {
@@ -77,4 +79,6 @@ public class EventBusMonitor : MonoBehaviour
     }
 
     void OnDestroy() => EventBus.Update -= IncrementInvokeCount;
+
+    #endif
 }

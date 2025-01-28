@@ -4,7 +4,9 @@ using System.Linq;
 
 public class EventBus
 {
+    #if UNITY_EDITOR
     public Action Update;
+    #endif
 
     private readonly Dictionary<object, HashSet<Delegate>> EventHandlers = new Dictionary<object, HashSet<Delegate>>();
     private object GlobalKey = typeof(object);
@@ -101,11 +103,15 @@ public class EventBus
             }
         }
 
+        #if UNITY_EDITOR
         Update?.Invoke();
+        #endif
     }
 
+    #if UNITY_EDITOR
     public Dictionary<object, int> GetHandlersData()
     {
         return EventHandlers.ToDictionary(entry => entry.Key, entry => entry.Value.Count);
     }
+    #endif
 }

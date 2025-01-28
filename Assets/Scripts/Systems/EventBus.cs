@@ -67,37 +67,52 @@ public class EventBus
     }
 
     public void Invoke<T>(T Payload)
-    {        
+    {
         var Key = typeof(T);
 
-        if (EventHandlers.ContainsKey(Key))
+        if (EventHandlers.TryGetValue(Key, out var Listeners))
         {
-            EventHandlers[Key].RemoveWhere(d => d == null || d.Target == null);
-
-            var ListenersCopy = new HashSet<Delegate>(EventHandlers[Key]);
-
-            foreach (var Listener in ListenersCopy)
+            foreach (var Listener in Listeners)
             {
-                if (Listener is Action<T> TypedListener)
+                if (ValidateAndLogListener(Listener, Key))
                 {
-                    TypedListener.Invoke(Payload);
+                    if (Listener is Action<T> TypedListener)
+                    {
+                        TypedListener.Invoke(Payload);
+                    }
                 }
             }
         }
 
-        if (EventHandlers.ContainsKey(GlobalKey))
+        if (EventHandlers.TryGetValue(GlobalKey, out var GlobalListeners))
         {
-            EventHandlers[GlobalKey].RemoveWhere(d => d == null || d.Target == null);
-
-            var GlobalListenersCopy = new HashSet<Delegate>(EventHandlers[GlobalKey]);
-
-            foreach (var Listener in GlobalListenersCopy)
+            foreach (var Listener in GlobalListeners)
             {
-                if (Listener is Action<T> TypedListener)
+                if (ValidateAndLogListener(Listener, GlobalKey))
                 {
-                    TypedListener.Invoke(Payload);
+                    if (Listener is Action<T> TypedListener)
+                    {
+                        TypedListener.Invoke(Payload);
+                    }
                 }
             }
         }
+    }
+
+    private bool ValidateAndLogListener(Delegate Listener, object Key)
+    {
+        if (Listener == null)
+        {
+            UnityEngine.Debug.LogWarning($"[Event Key: {Key}] Null listener detected. Check your event subscriptions.");
+            return false;
+        }
+
+        if (Listener.Target == null)
+        {
+            UnityEngine.Debug.LogWarning($"[Event Key: {Key}] Listener target is null. Likely a stale listener was not unsubscribed properly. Method: {Listener.Method?.Name ?? "Unknown"}.");
+            return false;
+        }
+
+        return true;
     }
 }

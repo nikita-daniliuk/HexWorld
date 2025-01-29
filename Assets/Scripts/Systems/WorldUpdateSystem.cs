@@ -4,7 +4,11 @@ using Zenject;
 
 public sealed class WorldUpdateSystem : IFixedTickable
 {
-    private readonly HashSet<IFixedUpdate> FixedUpdatesObj = new HashSet<IFixedUpdate>();
+    #if UNITY_EDITOR
+    public Action<int> Update;
+    #endif
+    
+    public readonly HashSet<IFixedUpdate> FixedUpdatesObj = new HashSet<IFixedUpdate>();
     private readonly List<IFixedUpdate> ToRemoveFixed = new List<IFixedUpdate>();
     private readonly List<IFixedUpdate> ToAddFixed = new List<IFixedUpdate>();
     private bool IsUpdating;
@@ -13,6 +17,9 @@ public sealed class WorldUpdateSystem : IFixedTickable
     {
         IsUpdating = true;
         ProcessPendingUpdates(FixedUpdatesObj, ToAddFixed, ToRemoveFixed, Obj => Obj.FixedRefresh());
+        #if UNITY_EDITOR
+        Update?.Invoke(FixedUpdatesObj.Count);
+        #endif
         IsUpdating = false;
     }
 
@@ -76,4 +83,11 @@ public sealed class WorldUpdateSystem : IFixedTickable
     }
 
     public bool IsSubscribe(IFixedUpdate Obj) => FixedUpdatesObj.Contains(Obj);
+
+    #if UNITY_EDITOR
+    public HashSet<object> GetSubscribedObjects()
+    {
+        return new HashSet<object>(FixedUpdatesObj);
+    }
+    #endif
 }

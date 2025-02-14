@@ -18,10 +18,10 @@ MonoBehaviour:
     Downsample: 1
     AfterOpaque: 1
     Source: 0
-    NormalSamples: 0
-    Intensity: 0.5
+    NormalSamples: 1
+    Intensity: 1.5
     DirectLightingStrength: 1
-    Radius: 0.5
+    Radius: 0.75
     Samples: 2
     BlurQuality: 0
     Falloff: 200

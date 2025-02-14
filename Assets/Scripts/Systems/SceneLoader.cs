@@ -9,7 +9,7 @@ public class SceneLoader : ISystems
     public SceneLoader(EventBus EventBus)
     {
         this.EventBus = EventBus;
-        this.EventBus.Subscribe<EnumSignals>(SignalBox);
+        this.EventBus.Subscribe<EnumSessionSignals>(SignalBox);
         LoadGame();
     }
     
@@ -17,7 +17,7 @@ public class SceneLoader : ISystems
     {
         switch (Obj)
         {
-            case EnumSignals.LoadingScene:
+            case EnumSessionSignals.StartSession :
                 LoadGame();
                 break;
             default: break;

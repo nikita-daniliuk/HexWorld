@@ -16,25 +16,22 @@ public class PlayerSpawner : MonoBehaviour
 
     void Spawn()
     {
-        for (int i = 0; i < 2; i++)
-        {
-            Hex RandomHex = Pool.GetAllOfType<Hex>()
-                .Where(x => x.IsWalkable)
-                .OrderBy(x => UnityEngine.Random.value)
-                .FirstOrDefault();
+        Hex RandomHex = Pool.GetAllOfType<Hex>()
+            .Where(x => x.IsWalkable)
+            .OrderBy(x => UnityEngine.Random.value)
+            .FirstOrDefault();
 
-            if(!RandomHex) return;
+        if(!RandomHex) return;
 
-            var Unit = Factory.Create<Unit>(PlayerPrefab.gameObject, RandomHex.transform.position);
+        var Unit = Factory.Create<Unit>(PlayerPrefab.gameObject, RandomHex.transform.position);
 
-            Unit.Initialization(new HashSet<object>{
-                EventBus,
-                WorldUpdateSystem
-            }); 
+        Unit.Initialization(new HashSet<object>{
+            EventBus,
+            WorldUpdateSystem
+        }); 
 
-            Unit.GetComponentByType<MoveComponent>().Position = RandomHex.Position;
+        Unit.GetComponentByType<MoveComponent>().Position = RandomHex.Position;
 
-            RandomHex.SetIsWalkable(false);            
-        }
+        RandomHex.SetIsWalkable(false);            
     }
 }

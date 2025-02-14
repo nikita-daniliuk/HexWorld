@@ -13,8 +13,7 @@ public class PathFinder : MonoBehaviour
     void Start()
     {
         EventBus.Subscribe<PickHexSignal>(SignalBox);
-        EventBus.Subscribe<UnitWalkSignal>(SignalBox);
-        EventBus.Subscribe<UnitJumpSignal>(SignalBox);
+        EventBus.Subscribe<ActionSignal>(SignalBox);
         EventBus.Subscribe<PickUnitSignal>(SignalBox);
     }
 
@@ -24,7 +23,7 @@ public class PathFinder : MonoBehaviour
         {
             case PickUnitSignal PickUnitSignal :
                 MoveComponent = PickUnitSignal.Unit.GetComponentByType<MoveComponent>();
-                HideAllPickedHexes();
+                ShowHidePickedHexes(Pool.GetAllOfType<Hex>(), false);
                 break;
 
             case PickHexSignal PickHexSignal:
@@ -37,23 +36,30 @@ public class PathFinder : MonoBehaviour
                         MoveComponent?.SetNewPath(GenerateNearestWay(PickHexSignal.Hex.Position));
                         break;
                     case EnumUnitState.Jump :
-                        MoveComponent?.SetNewPath(new HashSet<Hex> {PickHexSignal.Hex, Pool.GetAllOfType<Hex>().FirstOrDefault(x => x.Position == MoveComponent.Position)});
-                        HideAllPickedHexes();
+                        var AllHexes = Pool.GetAllOfType<Hex>();
+                        MoveComponent?.SetNewPath(new HashSet<Hex> {PickHexSignal.Hex, AllHexes.FirstOrDefault(x => x.Position == MoveComponent.Position)});
+                        ShowHidePickedHexes(AllHexes, false);
                         break;
                     default: break;
                 }
                 break;
 
-            case UnitWalkSignal UnitWalkSignal :
-                if (UnitWalkSignal.Unit.State != EnumUnitState.Stay) return;
-                GetHexesInRange(MoveComponent.CurrentTurnCount);
-                break;
-
-            case UnitJumpSignal JumpSignal :
-                if (JumpSignal.Unit.State != EnumUnitState.Stay) return;
-                if(GetHexesInRadiusWithJump(MoveComponent).Count != 0)
+            case ActionSignal ActionSignal :
+                switch (ActionSignal.EnumButtonSignals)
                 {
-                    MoveComponent.ReadyToJump();
+                    case EnumButtonSignals.Walk :
+                        if (ActionSignal.Unit.State != EnumUnitState.Stay) return;
+                        GetHexesInRange(MoveComponent.CurrentTurnCount);
+                        break;
+                    case EnumButtonSignals.Jump :
+                        if (ActionSignal.Unit.State != EnumUnitState.Stay) return;
+                        if(GetHexesInRadiusWithJump(MoveComponent).Count != 0) MoveComponent.ReadyToJump();
+                        break;
+                    case EnumButtonSignals.Attack :
+                        if (ActionSignal.Unit.State != EnumUnitState.Stay) return;
+
+                        break;
+                    default: break;
                 }
                 break;
                 
@@ -61,12 +67,11 @@ public class PathFinder : MonoBehaviour
         }
     }
 
-    void HideAllPickedHexes()
+    public void ShowHidePickedHexes(HashSet<Hex> Hexes, bool Switch)
     {
-        HashSet<Hex> Hexes = new HashSet<Hex>(Pool.GetAllOfType<Hex>());
         if (Hexes.Count == 0) return;
 
-        foreach (Hex Hex in Hexes) Hex.SetPickState(false);      
+        foreach (Hex Hex in Hexes) Hex.SetPickState(Switch);    
     }
 
     HashSet<Hex> GenerateNearestWay(Vector3Int FinalPoint)
@@ -74,12 +79,12 @@ public class PathFinder : MonoBehaviour
         HashSet<Hex> Hexes = new HashSet<Hex>(Pool.GetAllOfType<Hex>());
         if (Hexes.Count == 0) return null;
 
-        foreach (Hex Hex in Hexes) Hex.SetPickState(false);
+        ShowHidePickedHexes(Hexes, false);
 
         Vector3Int UnitPosition = MoveComponent.Position;
         HashSet<Hex> Path = FindShortestPath(UnitPosition, FinalPoint, Hexes);
 
-        foreach (Hex Hex in Path) Hex.SetPickState(true);
+        ShowHidePickedHexes(Path, true);
 
         return Path;
     }
@@ -170,7 +175,7 @@ public class PathFinder : MonoBehaviour
             }
         }
 
-        foreach (Hex Hex in Result) Hex.SetPickState(true);
+        ShowHidePickedHexes(Result, true);
 
         return Result;
     }
@@ -179,7 +184,7 @@ public class PathFinder : MonoBehaviour
     {
         var AllHexes = Pool.GetAllOfType<Hex>();
 
-        HideAllPickedHexes();
+        ShowHidePickedHexes(AllHexes, false);
 
         Vector3 CenterWorldPos = MoveComponent.transform.position;
         Vector3Int CenterPos = MoveComponent.Position;
@@ -259,7 +264,7 @@ public class PathFinder : MonoBehaviour
             if (!IsPathBlocked) Result.Add(TargetHex);
         }
 
-        foreach (Hex Hex in Result) Hex.SetPickState(true);
+        ShowHidePickedHexes(Result, true);
 
         return Result;
     }
@@ -304,8 +309,7 @@ public class PathFinder : MonoBehaviour
     void OnDestroy()
     {
         EventBus.Unsubscribe<PickHexSignal>(SignalBox);
-        EventBus.Unsubscribe<UnitWalkSignal>(SignalBox);
-        EventBus.Unsubscribe<UnitJumpSignal>(SignalBox);
+        EventBus.Unsubscribe<ActionSignal>(SignalBox);
         EventBus.Unsubscribe<PickUnitSignal>(SignalBox);
     }
 }

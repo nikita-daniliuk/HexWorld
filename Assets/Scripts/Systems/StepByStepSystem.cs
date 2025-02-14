@@ -12,13 +12,13 @@ public class StepByStepSystem : ISystems
     public void ChangeTurn()
     {
         CurrentTeam++;
-        EventBus.Invoke(EnumSignals.NextTurn);
+        //EventBus.Invoke(EnumSignals.NextTurn);
     }
 
     public void ChangeTurn(int TeamNumber)
     {
         CurrentTeam = TeamNumber;
-        EventBus.Invoke(EnumSignals.NextTurn);
+        //EventBus.Invoke(EnumSignals.NextTurn);
     }
 
     public bool IsItMyTurn(int TeamNumber)

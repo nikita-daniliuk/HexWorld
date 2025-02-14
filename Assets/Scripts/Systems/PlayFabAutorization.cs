@@ -55,7 +55,7 @@ public class PlayFabAutorization : MonoBehaviour
     {
         await UnityServices.InitializeAsync();
         await AuthenticationService.Instance.SignInAnonymouslyAsync();    
-        EventBus.Invoke(EnumSignals.LoadingScene);     
+        //EventBus.Invoke(EnumSignals.LoadingScene);     
     }
 
     void OnDestroy() => EventBus.UnsubscribeFromAll<object>(SignalBox);

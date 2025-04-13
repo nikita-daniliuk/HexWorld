@@ -5,7 +5,7 @@ using System.Linq;
 public class EventBus
 {
     #if UNITY_EDITOR
-    public Action Update;
+    public Action OnUpdate;
     #endif
 
     private readonly Dictionary<object, HashSet<Delegate>> EventHandlers = new Dictionary<object, HashSet<Delegate>>();
@@ -118,7 +118,7 @@ public class EventBus
         }
 
         #if UNITY_EDITOR
-        Update?.Invoke();
+        OnUpdate?.Invoke();
         #endif
     }
 

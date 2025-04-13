@@ -10,10 +10,17 @@ public class HexMeshCombiner : BaseSignal
     [SerializeField, ReadOnly] List<MeshFilter> OriginalHexFilters = new List<MeshFilter>();
     [SerializeField, ReadOnly] List<Hex> HiddenHexes = new List<Hex>();
 
+    [SerializeField] Material OutlineMaterial;
+
+    private GameObject CombineParent;
+
     private List<GameObject> CombinedMeshObjects = new List<GameObject>();
 
     void Start()
     {
+        CombineParent = new GameObject("CombineMesh");
+        CombineParent.transform.SetParent(transform);
+
         var UnWalkableHexes = Pool.GetAllOfType<Hex>().Where(X => !X.IsWalkable).ToHashSet();
 
         foreach (Hex Hex in UnWalkableHexes)
@@ -31,7 +38,7 @@ public class HexMeshCombiner : BaseSignal
         {
             CombineMeshesByMaterial();
 
-            foreach (var Hex in HiddenHexes)
+            foreach (Hex Hex in HiddenHexes)
             {
                 Hex.gameObject.SetActive(false);
             }
@@ -40,7 +47,7 @@ public class HexMeshCombiner : BaseSignal
 
     void OnDestroy()
     {
-        foreach (var CombinedMeshObject in CombinedMeshObjects)
+        foreach (GameObject CombinedMeshObject in CombinedMeshObjects)
         {
             if (CombinedMeshObject != null)
             {
@@ -48,10 +55,10 @@ public class HexMeshCombiner : BaseSignal
             }
         }
 
-        foreach (var Hex in HiddenHexes)
+        foreach (Hex Hex in HiddenHexes)
         {
-            if(!Hex) continue;
-            Hex?.gameObject.SetActive(true);
+            if (Hex != null)
+                Hex.gameObject.SetActive(true);
         }
     }
 
@@ -72,6 +79,8 @@ public class HexMeshCombiner : BaseSignal
             }
 
             GameObject CombinedMeshObject = new GameObject($"CombinedHexMesh_{MaterialGroup.Key.name}");
+            CombinedMeshObject.transform.SetParent(CombineParent.transform);
+
             MeshFilter CombinedMeshFilter = CombinedMeshObject.AddComponent<MeshFilter>();
             MeshRenderer CombinedMeshRenderer = CombinedMeshObject.AddComponent<MeshRenderer>();
 
@@ -79,10 +88,16 @@ public class HexMeshCombiner : BaseSignal
             CombinedMesh.CombineMeshes(Combine);
             CombinedMeshFilter.mesh = CombinedMesh;
 
-            CombinedMeshRenderer.material = MaterialGroup.Key;
+            if (OutlineMaterial != null)
+            {
+                CombinedMeshRenderer.materials = new Material[] { MaterialGroup.Key, OutlineMaterial };
+            }
+            else
+            {
+                CombinedMeshRenderer.material = MaterialGroup.Key;
+            }
 
             CombinedMeshObject.isStatic = true;
-
             CombinedMeshObjects.Add(CombinedMeshObject);
 
             EmitSignal(new Message(gameObject, $"Combined meshes for material {MaterialGroup.Key.name}: {MaterialGroup.Value.Count}"));

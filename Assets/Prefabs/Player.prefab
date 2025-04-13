@@ -68,7 +68,7 @@ MonoBehaviour:
   _JumpLength: 5
   _MaxStepsPerTurn: 10
   _CurrentTurnCount: 10
-  FlightSpeed: 10
+  FlightSpeed: 5
   JumpImpulseHeight: 2
 --- !u!114 &4016005872784890685
 MonoBehaviour:
@@ -82,6 +82,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a40c12ab96c27454da77145787ba9f2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Damage: 0
 --- !u!114 &5230539869152775823
 MonoBehaviour:
   m_ObjectHideFlags: 0

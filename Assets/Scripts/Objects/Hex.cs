@@ -2,6 +2,10 @@ using UnityEngine;
 using System.Collections.Generic;
 using Zenject;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 public class Hex : Unit
 {
     [Inject] EventBus EventBus;
@@ -103,4 +107,26 @@ public class Hex : Unit
     {
         Enter.SetActive(false);
     }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// В режиме редактирования автоматически оставляем только один материал.
+    /// Если у компонента HexVisual в массиве материалов больше одного элемента,
+    /// то оставляем только первый, чтобы не было null или лишних материалов.
+    /// </summary>
+    private void OnValidate()
+    {
+        if (HexVisual != null)
+        {
+            // Получаем текущий массив материалов
+            Material[] materials = HexVisual.sharedMaterials;
+            if (materials != null && materials.Length > 1)
+            {
+                // Оставляем только первый материал
+                HexVisual.sharedMaterials = new Material[] { materials[0] };
+                Debug.Log($"OnValidate: Для объекта {name} оставлен только первый материал.");
+            }
+        }
+    }
+#endif
 }

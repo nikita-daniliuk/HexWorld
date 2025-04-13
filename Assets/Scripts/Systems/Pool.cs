@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Pool
@@ -18,6 +19,11 @@ public class Pool
         }
 
         InitializeExistingChildren();
+    }
+
+    public T TryGetDeactiveObjByType<T>() where T : Component
+    {
+        return GetAllOfType<T>().FirstOrDefault(x => !x.gameObject.activeSelf);
     }
 
     private void InitializeExistingChildren()

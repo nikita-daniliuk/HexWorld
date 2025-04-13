@@ -23,7 +23,7 @@ public class EventBusMonitor : MonoBehaviour
         }
         else
         {
-            EventBus.Update += IncrementInvokeCount;
+            EventBus.OnUpdate += IncrementInvokeCount;
         }
     }
 
@@ -78,7 +78,7 @@ public class EventBusMonitor : MonoBehaviour
         }
     }
 
-    void OnDestroy() => EventBus.Update -= IncrementInvokeCount;
+    void OnDestroy() => EventBus.OnUpdate -= IncrementInvokeCount;
 
     #endif
 }
